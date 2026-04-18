@@ -11,7 +11,12 @@ export default function UserFilesPage() {
   const [files, setFiles] = useState([])
   const [folders, setFolders] = useState([])
   const [folderName, setFolderName] = useState('')
-  const [currentFolder, setCurrentFolder] = useState(null)
+
+  const [folderPath, setFolderPath] = useState([]) // 🔥 breadcrumb
+
+  const currentFolder = folderPath.length
+    ? folderPath[folderPath.length - 1]
+    : null
 
   useEffect(() => {
     if (id) {
@@ -21,22 +26,21 @@ export default function UserFilesPage() {
   }, [id, currentFolder])
 
   // 📁 Fetch folders
- const fetchFolders = async () => {
-  let query = supabase
-    .from('folders')
-    .select('*')
-    .eq('client_id', id)
+  const fetchFolders = async () => {
+    let query = supabase
+      .from('folders')
+      .select('*')
+      .eq('client_id', id)
 
-  if (currentFolder === null) {
-    query = query.is('parent_id', null)
-  } else {
-    query = query.eq('parent_id', currentFolder)
+    if (currentFolder === null) {
+      query = query.is('parent_id', null)
+    } else {
+      query = query.eq('parent_id', currentFolder.id)
+    }
+
+    const { data } = await query
+    setFolders(data || [])
   }
-
-  const { data } = await query
-
-  setFolders(data || [])
-}
 
   // 📄 Fetch files
   const fetchFiles = async () => {
@@ -44,7 +48,7 @@ export default function UserFilesPage() {
       .from('files')
       .select('*')
       .eq('client_id', id)
-      .eq('folder_id', currentFolder)
+      .eq('folder_id', currentFolder?.id || null)
 
     setFiles(data || [])
   }
@@ -57,7 +61,7 @@ export default function UserFilesPage() {
       {
         name: folderName,
         client_id: id,
-        parent_id: currentFolder
+        parent_id: currentFolder?.id || null
       }
     ])
 
@@ -87,7 +91,7 @@ export default function UserFilesPage() {
         name: file.name,
         file_path: filePath,
         client_id: id,
-        folder_id: currentFolder
+        folder_id: currentFolder?.id || null
       }
     ])
 
@@ -100,12 +104,50 @@ export default function UserFilesPage() {
     return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/client-files/${path}`
   }
 
+  // 📂 Open folder
+  const openFolder = (folder) => {
+    setFolderPath([...folderPath, folder])
+  }
+
+  // ⬅️ Go back
+  const goBack = () => {
+    const newPath = [...folderPath]
+    newPath.pop()
+    setFolderPath(newPath)
+  }
+
+  // 🧭 Breadcrumb click
+  const goToLevel = (index) => {
+    setFolderPath(folderPath.slice(0, index + 1))
+  }
+
   return (
     <div>
       <Header />
 
       <div style={{ padding: 40 }}>
         <h1>User File Manager</h1>
+
+        {/* 🧭 Breadcrumb */}
+        <div style={{ marginBottom: 20 }}>
+          <button onClick={() => setFolderPath([])}>Root</button>
+
+          {folderPath.map((f, i) => (
+            <span key={f.id}>
+              {' > '}
+              <button onClick={() => goToLevel(i)}>
+                {f.name}
+              </button>
+            </span>
+          ))}
+        </div>
+
+        {/* ⬅️ Back */}
+        {folderPath.length > 0 && (
+          <button onClick={goBack}>⬅️ Back</button>
+        )}
+
+        <hr /><br />
 
         {/* 📁 Create Folder */}
         <h3>Create Folder</h3>
@@ -126,7 +168,7 @@ export default function UserFilesPage() {
         <ul>
           {folders.map(f => (
             <li key={f.id}>
-              <button onClick={() => setCurrentFolder(f.id)}>
+              <button onClick={() => openFolder(f)}>
                 📁 {f.name}
               </button>
             </li>
