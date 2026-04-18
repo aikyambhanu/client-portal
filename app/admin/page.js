@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import Header from '../../components/Header'
+import { useRouter } from 'next/navigation'
 
 export default function AdminPage() {
   const [users, setUsers] = useState([])
-
+const router = useRouter()
   const [form, setForm] = useState({
     username: '',
     password: '',
@@ -141,7 +142,11 @@ export default function AdminPage() {
 
           <tbody>
             {users.map((u) => (
-              <tr key={u.id}>
+              <tr
+  key={u.id}
+  style={{ cursor: 'pointer' }}
+  onClick={() => router.push(`/admin/user/${u.id}`)}
+>
                 <td>{u.username}</td>
                 <td>{u.client_name}</td>
                 <td>{u.phone}</td>
