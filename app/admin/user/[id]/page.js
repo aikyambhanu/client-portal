@@ -21,15 +21,22 @@ export default function UserFilesPage() {
   }, [id, currentFolder])
 
   // 📁 Fetch folders
-  const fetchFolders = async () => {
-    const { data } = await supabase
-      .from('folders')
-      .select('*')
-      .eq('client_id', id)
-      .eq('parent_id', currentFolder)
+ const fetchFolders = async () => {
+  let query = supabase
+    .from('folders')
+    .select('*')
+    .eq('client_id', id)
 
-    setFolders(data || [])
+  if (currentFolder === null) {
+    query = query.is('parent_id', null)
+  } else {
+    query = query.eq('parent_id', currentFolder)
   }
+
+  const { data } = await query
+
+  setFolders(data || [])
+}
 
   // 📄 Fetch files
   const fetchFiles = async () => {
