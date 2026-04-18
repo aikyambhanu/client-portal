@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabaseClient'
-import Header from '@/components/Header'
+import { supabase } from '../../lib/supabaseClient'
+import Header from '../../components/Header'
 
 export default function AdminPage() {
   const [users, setUsers] = useState([])
