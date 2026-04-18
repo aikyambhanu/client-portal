@@ -11,8 +11,9 @@ export default function UserFilesPage() {
   const [files, setFiles] = useState([])
   const [folders, setFolders] = useState([])
   const [folderName, setFolderName] = useState('')
+  const [folderPath, setFolderPath] = useState([])
 
-  const [folderPath, setFolderPath] = useState([]) // 🔥 breadcrumb
+  const [dragActive, setDragActive] = useState(false)
 
   const currentFolder = folderPath.length
     ? folderPath[folderPath.length - 1]
@@ -69,11 +70,8 @@ export default function UserFilesPage() {
     fetchFolders()
   }
 
-  // 📤 Upload file
-  const handleUpload = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-
+  // 🔁 Reusable upload
+  const uploadFile = async (file) => {
     const filePath = `${id}/${Date.now()}-${file.name}`
 
     const { error } = await supabase.storage
@@ -94,8 +92,37 @@ export default function UserFilesPage() {
         folder_id: currentFolder?.id || null
       }
     ])
+  }
 
-    alert('File uploaded')
+  // 📤 Input upload
+  const handleUpload = async (e) => {
+    const files = e.target.files
+    for (let i = 0; i < files.length; i++) {
+      await uploadFile(files[i])
+    }
+    fetchFiles()
+  }
+
+  // 🟦 Drag handlers
+  const handleDragOver = (e) => {
+    e.preventDefault()
+    setDragActive(true)
+  }
+
+  const handleDragLeave = () => {
+    setDragActive(false)
+  }
+
+  const handleDrop = async (e) => {
+    e.preventDefault()
+    setDragActive(false)
+
+    const files = e.dataTransfer.files
+
+    for (let i = 0; i < files.length; i++) {
+      await uploadFile(files[i])
+    }
+
     fetchFiles()
   }
 
@@ -104,19 +131,17 @@ export default function UserFilesPage() {
     return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/client-files/${path}`
   }
 
-  // 📂 Open folder
+  // 📂 Navigation
   const openFolder = (folder) => {
     setFolderPath([...folderPath, folder])
   }
 
-  // ⬅️ Go back
   const goBack = () => {
     const newPath = [...folderPath]
     newPath.pop()
     setFolderPath(newPath)
   }
 
-  // 🧭 Breadcrumb click
   const goToLevel = (index) => {
     setFolderPath(folderPath.slice(0, index + 1))
   }
@@ -125,76 +150,109 @@ export default function UserFilesPage() {
     <div>
       <Header />
 
-      <div style={{ padding: 40 }}>
-        <h1>User File Manager</h1>
+      <div style={{ padding: 30, maxWidth: 1000, margin: 'auto' }}>
+        <h2 style={{ marginBottom: 20 }}>User File Manager</h2>
 
-        {/* 🧭 Breadcrumb */}
-        <div style={{ marginBottom: 20 }}>
+        {/* Breadcrumb */}
+        <div style={{ marginBottom: 15 }}>
           <button onClick={() => setFolderPath([])}>Root</button>
 
           {folderPath.map((f, i) => (
             <span key={f.id}>
               {' > '}
-              <button onClick={() => goToLevel(i)}>
-                {f.name}
-              </button>
+              <button onClick={() => goToLevel(i)}>{f.name}</button>
             </span>
           ))}
         </div>
 
-        {/* ⬅️ Back */}
+        {/* Back */}
         {folderPath.length > 0 && (
-          <button onClick={goBack}>⬅️ Back</button>
+          <button onClick={goBack} style={{ marginBottom: 20 }}>
+            ⬅ Back
+          </button>
         )}
 
-        <hr /><br />
+        {/* Create Folder */}
+        <div style={{
+          border: '1px solid #ddd',
+          padding: 15,
+          marginBottom: 20,
+          borderRadius: 8
+        }}>
+          <h4>Create Folder</h4>
+          <input
+            placeholder="Folder name"
+            value={folderName}
+            onChange={(e) => setFolderName(e.target.value)}
+            style={{ marginRight: 10 }}
+          />
+          <button onClick={createFolder}>Create</button>
+        </div>
 
-        {/* 📁 Create Folder */}
-        <h3>Create Folder</h3>
+        {/* Drag & Drop Upload */}
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          style={{
+            border: '2px dashed #aaa',
+            padding: 30,
+            textAlign: 'center',
+            marginBottom: 20,
+            borderRadius: 10,
+            background: dragActive ? '#eef6ff' : '#fafafa'
+          }}
+        >
+          <p>Drag & Drop files here</p>
+          <p>or</p>
+          <input type="file" multiple onChange={handleUpload} />
+        </div>
 
-        <input
-          placeholder="Folder name"
-          value={folderName}
-          onChange={(e) => setFolderName(e.target.value)}
-        />
+        {/* Folders */}
+        <div style={{ marginBottom: 20 }}>
+          <h4>Folders</h4>
 
-        <button onClick={createFolder}>Create</button>
-
-        <hr /><br />
-
-        {/* 📂 Folder List */}
-        <h3>Folders</h3>
-
-        <ul>
-          {folders.map(f => (
-            <li key={f.id}>
-              <button onClick={() => openFolder(f)}>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            {folders.map(f => (
+              <div
+                key={f.id}
+                onClick={() => openFolder(f)}
+                style={{
+                  padding: 10,
+                  border: '1px solid #ddd',
+                  borderRadius: 8,
+                  cursor: 'pointer'
+                }}
+              >
                 📁 {f.name}
-              </button>
-            </li>
-          ))}
-        </ul>
+              </div>
+            ))}
+          </div>
+        </div>
 
-        <hr /><br />
+        {/* Files */}
+        <div>
+          <h4>Files</h4>
 
-        {/* 📤 Upload */}
-        <h3>Upload File</h3>
-        <input type="file" onChange={handleUpload} />
-
-        <hr /><br />
-
-        {/* 📄 Files */}
-        <h3>Files</h3>
-
-        <ul>
-          {files.map(f => (
-            <li key={f.id}>
-              <a href={getFileUrl(f.file_path)} target="_blank">
-                {f.name}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {files.map(f => (
+              <a
+                key={f.id}
+                href={getFileUrl(f.file_path)}
+                target="_blank"
+                style={{
+                  padding: 10,
+                  border: '1px solid #ddd',
+                  borderRadius: 6,
+                  textDecoration: 'none'
+                }}
+              >
+                📄 {f.name}
               </a>
-            </li>
-          ))}
-        </ul>
+            ))}
+          </div>
+        </div>
+
       </div>
     </div>
   )
