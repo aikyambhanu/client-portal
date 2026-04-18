@@ -12,7 +12,6 @@ export default function UserFilesPage() {
   const [folders, setFolders] = useState([])
   const [folderName, setFolderName] = useState('')
   const [folderPath, setFolderPath] = useState([])
-
   const [dragActive, setDragActive] = useState(false)
 
   const currentFolder = folderPath.length
@@ -28,10 +27,7 @@ export default function UserFilesPage() {
 
   // 📁 Fetch folders
   const fetchFolders = async () => {
-    let query = supabase
-      .from('folders')
-      .select('*')
-      .eq('client_id', id)
+    let query = supabase.from('folders').select('*').eq('client_id', id)
 
     if (currentFolder === null) {
       query = query.is('parent_id', null)
@@ -55,55 +51,76 @@ export default function UserFilesPage() {
   }
 
   // 📁 Create folder
-  const createFolder = async () => {
-    if (!folderName) return alert('Enter folder name')
-
-    await supabase.from('folders').insert([
+  const createFolder = async (name, parentId) => {
+    const { data } = await supabase.from('folders').insert([
       {
-        name: folderName,
+        name,
         client_id: id,
-        parent_id: currentFolder?.id || null
+        parent_id: parentId
       }
-    ])
+    ]).select().single()
 
-    setFolderName('')
-    fetchFolders()
+    return data
   }
 
-  // 🔁 Reusable upload
-  const uploadFile = async (file) => {
+  // 📤 Upload file
+  const uploadFile = async (file, folderId) => {
     const filePath = `${id}/${Date.now()}-${file.name}`
 
-    const { error } = await supabase.storage
-      .from('client-files')
-      .upload(filePath, file)
-
-    if (error) {
-      console.error(error)
-      alert(error.message)
-      return
-    }
+    await supabase.storage.from('client-files').upload(filePath, file)
 
     await supabase.from('files').insert([
       {
         name: file.name,
         file_path: filePath,
         client_id: id,
-        folder_id: currentFolder?.id || null
+        folder_id: folderId
       }
     ])
   }
 
-  // 📤 Input upload
-  const handleUpload = async (e) => {
-    const files = e.target.files
-    for (let i = 0; i < files.length; i++) {
-      await uploadFile(files[i])
+  // 🔁 READ DIRECTORY RECURSIVELY
+  const readEntry = async (entry, parentId) => {
+    if (entry.isFile) {
+      entry.file(async (file) => {
+        await uploadFile(file, parentId)
+      })
     }
-    fetchFiles()
+
+    if (entry.isDirectory) {
+      const newFolder = await createFolder(entry.name, parentId)
+
+      const reader = entry.createReader()
+
+      reader.readEntries(async (entries) => {
+        for (let ent of entries) {
+          await readEntry(ent, newFolder.id)
+        }
+      })
+    }
   }
 
-  // 🟦 Drag handlers
+  // 🟦 HANDLE DROP (FILES + FOLDERS)
+  const handleDrop = async (e) => {
+    e.preventDefault()
+    setDragActive(false)
+
+    const items = e.dataTransfer.items
+
+    for (let i = 0; i < items.length; i++) {
+      const entry = items[i].webkitGetAsEntry()
+
+      if (entry) {
+        await readEntry(entry, currentFolder?.id || null)
+      }
+    }
+
+    setTimeout(() => {
+      fetchFolders()
+      fetchFiles()
+    }, 1500)
+  }
+
   const handleDragOver = (e) => {
     e.preventDefault()
     setDragActive(true)
@@ -111,19 +128,6 @@ export default function UserFilesPage() {
 
   const handleDragLeave = () => {
     setDragActive(false)
-  }
-
-  const handleDrop = async (e) => {
-    e.preventDefault()
-    setDragActive(false)
-
-    const files = e.dataTransfer.files
-
-    for (let i = 0; i < files.length; i++) {
-      await uploadFile(files[i])
-    }
-
-    fetchFiles()
   }
 
   // 🔗 File URL
@@ -151,12 +155,11 @@ export default function UserFilesPage() {
       <Header />
 
       <div style={{ padding: 30, maxWidth: 1000, margin: 'auto' }}>
-        <h2 style={{ marginBottom: 20 }}>User File Manager</h2>
+        <h2>User File Manager</h2>
 
         {/* Breadcrumb */}
-        <div style={{ marginBottom: 15 }}>
+        <div>
           <button onClick={() => setFolderPath([])}>Root</button>
-
           {folderPath.map((f, i) => (
             <span key={f.id}>
               {' > '}
@@ -165,94 +168,60 @@ export default function UserFilesPage() {
           ))}
         </div>
 
-        {/* Back */}
         {folderPath.length > 0 && (
-          <button onClick={goBack} style={{ marginBottom: 20 }}>
-            ⬅ Back
-          </button>
+          <button onClick={goBack}>⬅ Back</button>
         )}
 
-        {/* Create Folder */}
-        <div style={{
-          border: '1px solid #ddd',
-          padding: 15,
-          marginBottom: 20,
-          borderRadius: 8
-        }}>
-          <h4>Create Folder</h4>
-          <input
-            placeholder="Folder name"
-            value={folderName}
-            onChange={(e) => setFolderName(e.target.value)}
-            style={{ marginRight: 10 }}
-          />
-          <button onClick={createFolder}>Create</button>
-        </div>
+        <hr />
 
-        {/* Drag & Drop Upload */}
+        {/* Create Folder */}
+        <input
+          placeholder="Folder name"
+          value={folderName}
+          onChange={(e) => setFolderName(e.target.value)}
+        />
+        <button onClick={() => createFolder(folderName, currentFolder?.id || null)}>
+          Create Folder
+        </button>
+
+        <hr />
+
+        {/* Drag Area */}
         <div
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           style={{
             border: '2px dashed #aaa',
-            padding: 30,
+            padding: 40,
             textAlign: 'center',
-            marginBottom: 20,
-            borderRadius: 10,
-            background: dragActive ? '#eef6ff' : '#fafafa'
+            background: dragActive ? '#eef6ff' : '#fff'
           }}
         >
-          <p>Drag & Drop files here</p>
-          <p>or</p>
-          <input type="file" multiple onChange={handleUpload} />
+          Drag & Drop Files OR Folders Here
         </div>
+
+        <hr />
 
         {/* Folders */}
-        <div style={{ marginBottom: 20 }}>
-          <h4>Folders</h4>
-
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            {folders.map(f => (
-              <div
-                key={f.id}
-                onClick={() => openFolder(f)}
-                style={{
-                  padding: 10,
-                  border: '1px solid #ddd',
-                  borderRadius: 8,
-                  cursor: 'pointer'
-                }}
-              >
-                📁 {f.name}
-              </div>
-            ))}
+        <h4>Folders</h4>
+        {folders.map(f => (
+          <div key={f.id} onClick={() => openFolder(f)}>
+            📁 {f.name}
           </div>
-        </div>
+        ))}
+
+        <hr />
 
         {/* Files */}
-        <div>
-          <h4>Files</h4>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {files.map(f => (
-              <a
-                key={f.id}
-                href={getFileUrl(f.file_path)}
-                target="_blank"
-                style={{
-                  padding: 10,
-                  border: '1px solid #ddd',
-                  borderRadius: 6,
-                  textDecoration: 'none'
-                }}
-              >
-                📄 {f.name}
-              </a>
-            ))}
+        <h4>Files</h4>
+        {files.map(f => (
+          <div key={f.id}>
+            <a href={getFileUrl(f.file_path)} target="_blank">
+              📄 {f.name}
+            </a>
           </div>
-        </div>
-
+        ))}
       </div>
     </div>
   )
