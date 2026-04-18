@@ -7,21 +7,58 @@ import Header from '../../../../components/Header'
 
 export default function UserFilesPage() {
   const { id } = useParams()
+
   const [files, setFiles] = useState([])
+  const [folders, setFolders] = useState([])
+  const [folderName, setFolderName] = useState('')
+  const [currentFolder, setCurrentFolder] = useState(null)
 
   useEffect(() => {
-    fetchFiles()
-  }, [id])
+    if (id) {
+      fetchFolders()
+      fetchFiles()
+    }
+  }, [id, currentFolder])
 
+  // 📁 Fetch folders
+  const fetchFolders = async () => {
+    const { data } = await supabase
+      .from('folders')
+      .select('*')
+      .eq('client_id', id)
+      .eq('parent_id', currentFolder)
+
+    setFolders(data || [])
+  }
+
+  // 📄 Fetch files
   const fetchFiles = async () => {
     const { data } = await supabase
       .from('files')
       .select('*')
       .eq('client_id', id)
+      .eq('folder_id', currentFolder)
 
     setFiles(data || [])
   }
 
+  // 📁 Create folder
+  const createFolder = async () => {
+    if (!folderName) return alert('Enter folder name')
+
+    await supabase.from('folders').insert([
+      {
+        name: folderName,
+        client_id: id,
+        parent_id: currentFolder
+      }
+    ])
+
+    setFolderName('')
+    fetchFolders()
+  }
+
+  // 📤 Upload file
   const handleUpload = async (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -33,7 +70,8 @@ export default function UserFilesPage() {
       .upload(filePath, file)
 
     if (error) {
-      alert('Upload failed')
+      console.error(error)
+      alert(error.message)
       return
     }
 
@@ -41,7 +79,8 @@ export default function UserFilesPage() {
       {
         name: file.name,
         file_path: filePath,
-        client_id: id
+        client_id: id,
+        folder_id: currentFolder
       }
     ])
 
@@ -49,6 +88,7 @@ export default function UserFilesPage() {
     fetchFiles()
   }
 
+  // 🔗 File URL
   const getFileUrl = (path) => {
     return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/client-files/${path}`
   }
@@ -60,12 +100,41 @@ export default function UserFilesPage() {
       <div style={{ padding: 40 }}>
         <h1>User File Manager</h1>
 
-        {/* Upload */}
+        {/* 📁 Create Folder */}
+        <h3>Create Folder</h3>
+
+        <input
+          placeholder="Folder name"
+          value={folderName}
+          onChange={(e) => setFolderName(e.target.value)}
+        />
+
+        <button onClick={createFolder}>Create</button>
+
+        <hr /><br />
+
+        {/* 📂 Folder List */}
+        <h3>Folders</h3>
+
+        <ul>
+          {folders.map(f => (
+            <li key={f.id}>
+              <button onClick={() => setCurrentFolder(f.id)}>
+                📁 {f.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        <hr /><br />
+
+        {/* 📤 Upload */}
+        <h3>Upload File</h3>
         <input type="file" onChange={handleUpload} />
 
         <hr /><br />
 
-        {/* Files List */}
+        {/* 📄 Files */}
         <h3>Files</h3>
 
         <ul>
