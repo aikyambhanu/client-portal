@@ -18,7 +18,7 @@ export default function Home() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <img src="/companylogo.png" width="40" />
-          <h2>AIKYA Management Consultancy</h2>
+          <h2>AIKYAM Corporate Services</h2>
         </div>
 
         <div style={{ display: 'flex', gap: 25 }}>
@@ -129,7 +129,7 @@ export default function Home() {
           textAlign: 'center',
           color: '#555'
         }}>
-          AIKYA Management Consultancy is dedicated to providing professional
+          AIKYAM Corporate Services is dedicated to providing professional
           audit and compliance services. With deep expertise in taxation and
           corporate regulations, we ensure seamless and reliable service for
           businesses of all sizes.
