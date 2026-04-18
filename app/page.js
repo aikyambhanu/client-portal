@@ -1,3 +1,4 @@
+'use client'
 export default function Home() {
   return (
     <div style={{ fontFamily: 'Inter, sans-serif', color: '#111' }}>
