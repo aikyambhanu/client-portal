@@ -137,6 +137,9 @@ export default function UserFilesPage() {
     setFolderPath(folderPath.slice(0, -1))
   }
 
+  const truncate = (text) =>
+    text.length > 18 ? text.slice(0, 18) + '...' : text
+
   return (
     <div style={container}>
 
@@ -147,18 +150,18 @@ export default function UserFilesPage() {
         <div style={navItem} onClick={() => setFolderPath([])}>
           Root
         </div>
-
-        {folderPath.length > 0 && (
-          <div style={navItem} onClick={goBack}>
-            ⬅ Back
-          </div>
-        )}
       </div>
 
       {/* MAIN */}
       <div style={{ flex: 1, padding: 25 }}>
 
-        <h2>Upload Files</h2>
+        {/* TOP BAR */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {folderPath.length > 0 && (
+            <button onClick={goBack} style={backBtn}>←</button>
+          )}
+          <h2>Upload Files</h2>
+        </div>
 
         {/* MESSAGE */}
         {message && <p style={{ color: '#0f0' }}>{message}</p>}
@@ -198,9 +201,19 @@ export default function UserFilesPage() {
               : 'rgba(255,255,255,0.1)'
           }}
         >
-          Drag & Drop files
-          <br />
-          <input type="file" multiple onChange={handleUpload} />
+          <div style={{ marginBottom: 10 }}>
+            Drag & Drop files
+          </div>
+
+          <input
+            type="file"
+            multiple
+            onChange={handleUpload}
+            style={{
+              display: 'block',
+              margin: '10px auto 0'
+            }}
+          />
         </div>
 
         {/* PROGRESS */}
@@ -222,7 +235,7 @@ export default function UserFilesPage() {
         <div style={grid}>
           {folders.map(f => (
             <div key={f.id} style={card} onClick={() => openFolder(f)}>
-              📁 {f.name}
+              📁 {truncate(f.name)}
             </div>
           ))}
         </div>
@@ -233,7 +246,7 @@ export default function UserFilesPage() {
           {files.map(f => (
             <div key={f.id} style={card}>
               <a href={getFileUrl(f.file_path)} target="_blank">
-                📄 {f.name}
+                📄 {truncate(f.name)}
               </a>
               <br />
               <button onClick={() => deleteFile(f)} style={deleteBtn}>
@@ -260,7 +273,8 @@ const container = {
 const sidebar = {
   width: 220,
   padding: 20,
-  background: 'rgba(255,255,255,0.1)'
+  background: 'rgba(255,255,255,0.08)',
+  backdropFilter: 'blur(10px)'
 }
 
 const navItem = {
@@ -278,7 +292,10 @@ const card = {
   padding: 15,
   borderRadius: 10,
   background: 'rgba(255,255,255,0.15)',
-  cursor: 'pointer'
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis'
 }
 
 const deleteBtn = {
@@ -292,5 +309,12 @@ const deleteBtn = {
 }
 
 const crumb = {
+  cursor: 'pointer'
+}
+
+const backBtn = {
+  padding: '6px 10px',
+  borderRadius: 6,
+  border: 'none',
   cursor: 'pointer'
 }
