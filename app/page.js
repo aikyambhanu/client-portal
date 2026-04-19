@@ -18,7 +18,7 @@ export default function Home() {
 
         <div style={{ display: 'flex', gap: 25 }}>
           {['services', 'contact'].map(item => (
-            <span key={item} onClick={() => scrollTo(item)} style={nav}>
+            <span key={item} onClick={() => scrollTo(item)} style={navLink}>
               {item.toUpperCase()}
             </span>
           ))}<a
