@@ -7,7 +7,10 @@ import { useRouter } from 'next/navigation'
 export default function Dashboard() {
   const [folders, setFolders] = useState([])
   const [files, setFiles] = useState([])
+
   const [folderPath, setFolderPath] = useState([])
+  const [search, setSearch] = useState('')
+  const [sort, setSort] = useState('name')
 
   const router = useRouter()
 
@@ -46,7 +49,7 @@ export default function Dashboard() {
     setFolders(data || [])
   }
 
-  // 📄 Fetch files
+  // 📄 Fetch files (FIXED ROOT ISSUE)
   const fetchFiles = async () => {
     let query = supabase
       .from('files')
@@ -63,23 +66,32 @@ export default function Dashboard() {
     setFiles(data || [])
   }
 
-  // 🔗 File URL
+  // 🔍 FILTER + SORT
+  const filteredFiles = files
+    .filter(f => f.name.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => {
+      if (sort === 'name') return a.name.localeCompare(b.name)
+      if (sort === 'date') return new Date(b.created_at) - new Date(a.created_at)
+      return 0
+    })
+
+  // 📄 File icons
+  const getIcon = (name) => {
+    if (name.endsWith('.pdf')) return '📕'
+    if (name.match(/\.(jpg|jpeg|png|webp)$/)) return '🖼️'
+    if (name.match(/\.(xls|xlsx)$/)) return '📊'
+    if (name.match(/\.(doc|docx)$/)) return '📄'
+    return '📁'
+  }
+
   const getFileUrl = (path) => {
     return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/client-files/${path}`
   }
 
-  // 📂 Navigation
   const openFolder = (folder) => {
     setFolderPath([...folderPath, folder])
   }
 
-  const goBack = () => {
-    const newPath = [...folderPath]
-    newPath.pop()
-    setFolderPath(newPath)
-  }
-
-  // 🚪 Logout
   const logout = () => {
     localStorage.removeItem('user')
     router.push('/login')
@@ -90,8 +102,7 @@ export default function Dashboard() {
       height: '100vh',
       display: 'flex',
       background: 'linear-gradient(135deg, #1e3c72, #2a5298)',
-      color: '#fff',
-      fontFamily: 'Inter, sans-serif'
+      color: '#fff'
     }}>
 
       {/* SIDEBAR */}
@@ -99,20 +110,16 @@ export default function Dashboard() {
         width: 240,
         padding: 20,
         background: 'rgba(255,255,255,0.1)',
-        backdropFilter: 'blur(10px)',
-        borderRight: '1px solid rgba(255,255,255,0.2)'
+        backdropFilter: 'blur(10px)'
       }}>
-        <h3 style={{ marginBottom: 20 }}>📁 My Drive</h3>
+        <h3>📁 My Drive</h3>
 
-        <div
-          style={navItem}
-          onClick={() => setFolderPath([])}
-        >
+        <div onClick={() => setFolderPath([])} style={navItem}>
           Root
         </div>
 
         {folderPath.length > 0 && (
-          <div style={navItem} onClick={goBack}>
+          <div onClick={() => setFolderPath(folderPath.slice(0, -1))} style={navItem}>
             ⬅ Back
           </div>
         )}
@@ -128,15 +135,31 @@ export default function Dashboard() {
           marginBottom: 20
         }}>
           <h2>My Documents</h2>
+          <button onClick={logout} style={logoutBtn}>Logout</button>
+        </div>
 
-          <button onClick={logout} style={logoutBtn}>
-            Logout
-          </button>
+        {/* SEARCH + SORT */}
+        <div style={{
+          display: 'flex',
+          gap: 10,
+          marginBottom: 20
+        }}>
+          <input
+            placeholder="Search files..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={searchBox}
+          />
+
+          <select value={sort} onChange={(e) => setSort(e.target.value)} style={searchBox}>
+            <option value="name">Sort by Name</option>
+            <option value="date">Sort by Date</option>
+          </select>
         </div>
 
         {/* BREADCRUMB */}
         <div style={{ marginBottom: 20 }}>
-          <span style={{ cursor: 'pointer' }} onClick={() => setFolderPath([])}>
+          <span onClick={() => setFolderPath([])} style={{ cursor: 'pointer' }}>
             Root
           </span>
 
@@ -144,8 +167,8 @@ export default function Dashboard() {
             <span key={f.id}>
               {' > '}
               <span
-                style={{ cursor: 'pointer' }}
                 onClick={() => setFolderPath(folderPath.slice(0, i + 1))}
+                style={{ cursor: 'pointer' }}
               >
                 {f.name}
               </span>
@@ -157,11 +180,7 @@ export default function Dashboard() {
         <h3>Folders</h3>
         <div style={grid}>
           {folders.map(f => (
-            <div
-              key={f.id}
-              style={card}
-              onClick={() => openFolder(f)}
-            >
+            <div key={f.id} style={card} onClick={() => openFolder(f)}>
               📁 {f.name}
             </div>
           ))}
@@ -170,14 +189,14 @@ export default function Dashboard() {
         {/* FILES */}
         <h3 style={{ marginTop: 30 }}>Files</h3>
         <div style={grid}>
-          {files.map(f => (
+          {filteredFiles.map(f => (
             <a
               key={f.id}
               href={getFileUrl(f.file_path)}
               target="_blank"
               style={card}
             >
-              📄 {f.name}
+              {getIcon(f.name)} {f.name}
             </a>
           ))}
         </div>
@@ -209,8 +228,8 @@ const card = {
 const navItem = {
   padding: 10,
   borderRadius: 8,
+  marginTop: 10,
   cursor: 'pointer',
-  marginBottom: 10,
   background: 'rgba(255,255,255,0.1)'
 }
 
@@ -221,4 +240,11 @@ const logoutBtn = {
   cursor: 'pointer',
   background: '#ff4d4f',
   color: '#fff'
+}
+
+const searchBox = {
+  padding: 10,
+  borderRadius: 8,
+  border: 'none',
+  outline: 'none'
 }
