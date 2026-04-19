@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
-import Header from '../../components/Header'
 import { useRouter } from 'next/navigation'
 
 export default function AdminPage() {
   const [users, setUsers] = useState([])
-const router = useRouter()
+  const [search, setSearch] = useState('')
+
+  const router = useRouter()
+
   const [form, setForm] = useState({
     username: '',
     password: '',
@@ -32,33 +34,28 @@ const router = useRouter()
 
   const createUser = async () => {
     if (!form.username || !form.password || !form.client_name || !form.phone) {
-      alert('Please fill mandatory fields')
+      alert('Fill mandatory fields')
       return
     }
 
-    const { error } = await supabase.from('users').insert([
+    await supabase.from('users').insert([
       {
         ...form,
-        role: 'client'
+        role: 'client',
+        is_active: true
       }
     ])
 
-    if (error) {
-      alert(error.message)
-    } else {
-      alert('User created successfully')
+    setForm({
+      username: '',
+      password: '',
+      client_name: '',
+      phone: '',
+      email: '',
+      company_name: ''
+    })
 
-      setForm({
-        username: '',
-        password: '',
-        client_name: '',
-        phone: '',
-        email: '',
-        company_name: ''
-      })
-
-      fetchUsers()
-    }
+    fetchUsers()
   }
 
   const toggleUser = async (user) => {
@@ -70,97 +67,184 @@ const router = useRouter()
     fetchUsers()
   }
 
+  // 🔍 FILTER
+  const filteredUsers = users.filter(u => {
+    const text = search.toLowerCase()
+
+    return (
+      u.client_name?.toLowerCase().includes(text) ||
+      u.company_name?.toLowerCase().includes(text) ||
+      u.phone?.toString().includes(text)
+    )
+  })
+
   return (
-    <div>
-      <Header />
+    <div style={container}>
 
-      <div style={{ padding: 40 }}>
-        <h1>Admin Dashboard</h1>
-
-        {/* CREATE USER FORM */}
-        <h3>Create User</h3>
-
-        <input
-          name="username"
-          placeholder="Username"
-          value={form.username}
-          onChange={handleChange}
-        /><br /><br />
-
-        <input
-          name="password"
-          placeholder="Password"
-          value={form.password}
-          onChange={handleChange}
-        /><br /><br />
-
-        <input
-          name="client_name"
-          placeholder="Client Name"
-          value={form.client_name}
-          onChange={handleChange}
-        /><br /><br />
-
-        <input
-          name="phone"
-          placeholder="Phone"
-          value={form.phone}
-          onChange={handleChange}
-        /><br /><br />
-
-        <input
-          name="email"
-          placeholder="Email (optional)"
-          value={form.email}
-          onChange={handleChange}
-        /><br /><br />
-
-        <input
-          name="company_name"
-          placeholder="Company (optional)"
-          value={form.company_name}
-          onChange={handleChange}
-        /><br /><br />
-
-        <button onClick={createUser}>Create User</button>
-
-        <hr /><br />
-
-        {/* USERS TABLE */}
-        <h3>Users List</h3>
-
-        <table border="1" cellPadding="10">
-          <thead>
-            <tr>
-              <th>Username</th>
-              <th>Client Name</th>
-              <th>Phone</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {users.map((u) => (
-              <tr
-  key={u.id}
-  style={{ cursor: 'pointer' }}
-  onClick={() => router.push(`/admin/user/${u.id}`)}
->
-                <td>{u.username}</td>
-                <td>{u.client_name}</td>
-                <td>{u.phone}</td>
-                <td>{u.is_active ? 'Active' : 'Disabled'}</td>
-                <td>
-                  <button onClick={() => toggleUser(u)}>
-                    Toggle
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* HEADER */}
+      <div style={header}>
+        <h2>Admin Dashboard</h2>
       </div>
+
+      {/* CREATE USER */}
+      <div style={card}>
+        <h3>Create Client</h3>
+
+        <div style={grid}>
+          <input name="username" placeholder="Username" value={form.username} onChange={handleChange} />
+          <input name="password" placeholder="Password" value={form.password} onChange={handleChange} />
+          <input name="client_name" placeholder="Client Name" value={form.client_name} onChange={handleChange} />
+          <input name="phone" placeholder="Phone" value={form.phone} onChange={handleChange} />
+          <input name="email" placeholder="Email" value={form.email} onChange={handleChange} />
+          <input name="company_name" placeholder="Company" value={form.company_name} onChange={handleChange} />
+        </div>
+
+        <button style={primaryBtn} onClick={createUser}>
+          Create User
+        </button>
+      </div>
+
+      {/* USERS LIST */}
+      <div style={card}>
+        <h3>Clients</h3>
+
+        {/* SEARCH */}
+        <input
+          placeholder="Search by client / company / phone"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={searchBox}
+        />
+
+        {/* USERS */}
+        {filteredUsers.length === 0 && (
+          <p style={{ opacity: 0.7 }}>No users found</p>
+        )}
+
+        {filteredUsers.map((u) => (
+          <div key={u.id} style={userRow}>
+
+            <div>
+              <b>{u.client_name}</b><br />
+              <span style={subText}>{u.username}</span><br />
+              <span style={subText}>{u.email || 'No Email'}</span>
+            </div>
+
+            <div>{u.phone}</div>
+
+            {/* STATUS SWITCH */}
+            <div>
+              <label style={switch}>
+                <input
+                  type="checkbox"
+                  checked={u.is_active}
+                  onChange={() => toggleUser(u)}
+                />
+                <span style={slider}></span>
+              </label>
+            </div>
+
+            {/* ACTION */}
+            <button
+              style={secondaryBtn}
+              onClick={() => router.push(`/admin/user/${u.id}`)}
+            >
+              Upload Files
+            </button>
+
+          </div>
+        ))}
+      </div>
+
     </div>
   )
+}
+
+/* STYLES */
+
+const container = {
+  minHeight: '100vh',
+  padding: 30,
+  background: 'linear-gradient(135deg, #1e3c72, #2a5298)',
+  color: '#fff'
+}
+
+const header = {
+  marginBottom: 20
+}
+
+const card = {
+  background: 'rgba(255,255,255,0.1)',
+  padding: 20,
+  borderRadius: 12,
+  backdropFilter: 'blur(10px)',
+  marginBottom: 20
+}
+
+const grid = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))',
+  gap: 10,
+  marginBottom: 15
+}
+
+const userRow = {
+  display: 'grid',
+  gridTemplateColumns: '2fr 1fr 1fr 1fr',
+  alignItems: 'center',
+  padding: 15,
+  marginTop: 10,
+  borderRadius: 10,
+  background: 'rgba(255,255,255,0.08)'
+}
+
+const primaryBtn = {
+  padding: '10px 20px',
+  background: '#00c6ff',
+  border: 'none',
+  borderRadius: 8,
+  color: '#fff',
+  cursor: 'pointer'
+}
+
+const secondaryBtn = {
+  padding: '8px 14px',
+  borderRadius: 8,
+  border: 'none',
+  background: '#0072ff',
+  color: '#fff',
+  cursor: 'pointer'
+}
+
+const subText = {
+  fontSize: 12,
+  opacity: 0.7
+}
+
+const searchBox = {
+  padding: 10,
+  borderRadius: 8,
+  border: 'none',
+  margin: '10px 0 15px 0',
+  width: '100%',
+  outline: 'none'
+}
+
+const switch = {
+  position: 'relative',
+  display: 'inline-block',
+  width: 40,
+  height: 20
+}
+
+const slider = {
+  position: 'absolute',
+  cursor: 'pointer',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: '#ccc',
+  borderRadius: 20,
+  transition: '.4s'
 }
