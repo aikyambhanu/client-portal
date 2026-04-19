@@ -178,9 +178,19 @@ export default function UserFilesPage() {
   const openFolder = (f) => setFolderPath([...folderPath, f])
   const goBack = () => setFolderPath(folderPath.slice(0, -1))
 
-  const getFileUrl = (path) =>
-    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/client-files/${path}`
+ const getSecureUrl = async (path) => {
+  const { data, error } = await supabase
+    .storage
+    .from('client-files')
+    .createSignedUrl(path, 60) // 60 seconds
 
+  if (error) {
+    console.error(error)
+    return null
+  }
+
+  return data.signedUrl
+}
   const truncate = (t) => (t.length > 18 ? t.slice(0, 18) + '...' : t)
 
   return (
@@ -243,13 +253,15 @@ export default function UserFilesPage() {
         <div style={grid}>
           {files.map(f => (
           <div key={f.id} style={cardRow}>
-  <a
-    href={getFileUrl(f.file_path)}
-    target="_blank"
-    style={cardText}
-  >
+ <span
+  onClick={async () => {
+    const url = await getSecureUrl(f.file_path)
+    if (url) window.open(url, '_blank')
+  }}
+  style={{ cursor: 'pointer' }}
+
     📄 {truncate(f.name)}
-  </a>
+>
 
   <span
     onClick={(e) => {
