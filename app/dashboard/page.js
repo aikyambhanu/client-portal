@@ -72,9 +72,19 @@ export default function Dashboard() {
     return '📄'
   }
 
-  const getFileUrl = (path) => {
-    return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/client-files/${path}`
+const getSecureUrl = async (path) => {
+  const { data, error } = await supabase
+    .storage
+    .from('client-files')
+    .createSignedUrl(path, 60) // 60 seconds
+
+  if (error) {
+    console.error(error)
+    return null
   }
+
+  return data.signedUrl
+}
 
   const openFolder = (folder) => {
     setFolderPath([...folderPath, folder])
@@ -182,12 +192,13 @@ export default function Dashboard() {
         <h3 style={{ marginTop: 30 }}>Files</h3>
         <div style={grid}>
           {filteredFiles.map(f => (
-            <a
-              key={f.id}
-              href={getFileUrl(f.file_path)}
-              target="_blank"
-              style={card}
-            >
+          <span
+  onClick={async () => {
+    const url = await getSecureUrl(f.file_path)
+    if (url) window.open(url, '_blank')
+  }}
+  style={{ cursor: 'pointer' }}
+>
               {getIcon(f.name)} {truncate(f.name)}
             </a>
           ))}
