@@ -250,29 +250,35 @@ export default function UserFilesPage() {
 
         {/* FILES */}
         <h3>Files</h3>
-        <div style={grid}>
-          {files.map(f => (
-          <div key={f.id} style={cardRow}>
- <span
-  onClick={async () => {
-    const url = await getSecureUrl(f.file_path)
-    if (url) window.open(url, '_blank')
-  }}
-  style={{ cursor: 'pointer' }}    
->
+       <div style={grid}>
+  {files.map(f => (
+    <div key={f.id} style={cardRow}>
 
-  <span
-    onClick={(e) => {
-      e.stopPropagation()
-      deleteFile(f)
-    }}
-    style={deleteIcon}
-  >
-    🗑️
-  </span>
+      {/* FILE NAME CLICK */}
+      <span
+        onClick={async () => {
+          const url = await getSecureUrl(f.file_path)
+          if (url) window.open(url, '_blank')
+        }}
+        style={cardText}
+      >
+        📄 {truncate(f.name)}
+      </span>
+
+      {/* DELETE ICON */}
+      <span
+        onClick={(e) => {
+          e.stopPropagation()
+          deleteFile(f)
+        }}
+        style={deleteIcon}
+      >
+        🗑️
+      </span>
+
+    </div>
+  ))}
 </div>
-          ))}
-        </div>
       </div>
     </div>
   )
