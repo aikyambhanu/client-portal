@@ -1,193 +1,111 @@
 'use client'
+
 export default function Home() {
+
+  const scrollTo = (id) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+  }
+
   return (
-    <div style={{ fontFamily: 'Inter, sans-serif', color: '#111' }}>
+    <div style={container}>
 
       {/* HEADER */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '18px 50px',
-        position: 'sticky',
-        top: 0,
-        background: 'rgba(255,255,255,0.9)',
-        backdropFilter: 'blur(10px)',
-        borderBottom: '1px solid #eee',
-        zIndex: 1000
-      }}>
+      <div style={header}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <img src="/companylogo.png" width="45" />
-          <h2 style={{ fontWeight: 600 }}>AIKYA Consultancy</h2>
+          <h2>AIKYAM Corporate Services</h2>
         </div>
 
-        <div style={{ display: 'flex', gap: 30, alignItems: 'center' }}>
-          {['Services', 'About', 'Contact'].map((item, i) => (
-            <a key={i} href={`#${item.toLowerCase()}`}
-              style={{
-                textDecoration: 'none',
-                color: '#333',
-                fontWeight: 500,
-                transition: '0.3s'
-              }}
-              onMouseOver={e => e.target.style.color = '#0070f3'}
-              onMouseOut={e => e.target.style.color = '#333'}
-            >
-              {item}
-            </a>
+        <div style={{ display: 'flex', gap: 25 }}>
+          {['services', 'contact'].map(item => (
+            <span key={item} onClick={() => scrollTo(item)} style={nav}>
+              {item.toUpperCase()}
+            </span>
           ))}
-
-          <a href="/login">
-            <button style={{
-              padding: '10px 20px',
-              background: '#0070f3',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 8,
-              cursor: 'pointer',
-              transition: '0.3s',
-              boxShadow: '0 4px 14px rgba(0,118,255,0.3)'
-            }}
-              onMouseOver={e => e.target.style.transform = 'scale(1.05)'}
-              onMouseOut={e => e.target.style.transform = 'scale(1)'}
-            >
-              Login
-            </button>
-          </a>
+          <a href="/login"><button style={loginBtn}>Login</button></a>
         </div>
       </div>
 
       {/* HERO */}
-      <div style={{
-        padding: '100px 40px',
-        textAlign: 'center',
-        background: 'linear-gradient(135deg, #eef3ff, #ffffff)'
-      }}>
-        <h1 style={{
-          fontSize: 46,
-          fontWeight: 700,
-          marginBottom: 20
-        }}>
-          Smart Compliance. Seamless Experience.
+      <div style={hero}>
+        <div style={glow}></div>
+
+        <h1 style={heroTitle}>
+          Smart Compliance.<br />Seamless Experience.
         </h1>
 
-        <p style={{
-          fontSize: 18,
-          color: '#555',
-          maxWidth: 700,
-          margin: 'auto'
-        }}>
-          GST, Income Tax, PF, ESI & ROC compliance services designed
-          to simplify your business operations.
+        <p style={heroText}>
+          Simplifying GST, Income Tax, PF, ESI & ROC compliance with
+          precision, trust and technology.
         </p>
 
-        <a href="/login">
-          <button style={{
-            marginTop: 30,
-            padding: '14px 32px',
-            fontSize: 16,
-            background: '#0070f3',
-            color: '#fff',
-            borderRadius: 10,
-            border: 'none',
-            cursor: 'pointer',
-            transition: '0.3s',
-            boxShadow: '0 6px 20px rgba(0,118,255,0.3)'
-          }}
-            onMouseOver={e => e.target.style.transform = 'translateY(-3px)'}
-            onMouseOut={e => e.target.style.transform = 'translateY(0)'}
-          >
-            Access Client Portal
-          </button>
-        </a>
+        <button style={cta} onClick={() => scrollTo('services')}>
+          Explore Services
+        </button>
       </div>
 
-      {/* SERVICES */}
-      <div id="services" style={{ padding: 60 }}>
-        <h2 style={{ textAlign: 'center', marginBottom: 40 }}>
-          Our Services
-        </h2>
+      {/* SERVICES CARDS */}
+      <div id="services" style={section}>
+        <h2 style={title}>Our Services</h2>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px,1fr))',
-          gap: 25
-        }}>
+        <div style={grid}>
           {[
-            { title: "GST Filing", desc: "Accurate GST returns & compliance." },
-            { title: "Income Tax", desc: "Professional tax filing services." },
-            { title: "PF & ESI", desc: "Employee compliance management." },
-            { title: "ROC Compliance", desc: "Corporate filings & governance." }
-          ].map((s, i) => (
-            <div key={i}
-              style={{
-                padding: 25,
-                borderRadius: 12,
-                background: '#fff',
-                transition: '0.3s',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-              }}
-              onMouseOver={e => {
-                e.currentTarget.style.transform = 'translateY(-5px)'
-                e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)'
-              }}
-              onMouseOut={e => {
-                e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)'
-              }}
+            { id: 'gst', title: 'GST Filing' },
+            { id: 'tax', title: 'Income Tax' },
+            { id: 'pf', title: 'PF & ESI' },
+            { id: 'roc', title: 'ROC Compliance' }
+          ].map((s) => (
+            <div
+              key={s.id}
+              style={card}
+              onClick={() => scrollTo(s.id)}
             >
-              <h3>{s.title}</h3>
-              <p style={{ color: '#555' }}>{s.desc}</p>
+              {s.title}
             </div>
           ))}
         </div>
       </div>
 
-      {/* WHY US */}
-      <div style={{ padding: 60, background: '#f9f9f9' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: 40 }}>
-          Why Choose Us
-        </h2>
+      {/* SERVICE DETAILS */}
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))',
-          gap: 20,
-          textAlign: 'center'
-        }}>
-          {[
-            "Experienced Professionals",
-            "On-Time Compliance",
-            "Secure Data Handling",
-            "Dedicated Support"
-          ].map((item, i) => (
-            <div key={i}
-              style={{
-                padding: 20,
-                borderRadius: 10,
-                background: '#fff',
-                transition: '0.3s'
-              }}
-              onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'}
-              onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
-            >
-              ✔ {item}
-            </div>
-          ))}
-        </div>
+      <div id="gst" style={detail}>
+        <h2>GST Filing</h2>
+        <p>
+          We ensure accurate and timely GST return filing, input tax credit optimization,
+          and compliance with all statutory regulations. Our process minimizes errors and
+          helps businesses avoid penalties.
+        </p>
+      </div>
+
+      <div id="tax" style={detailAlt}>
+        <h2>Income Tax Services</h2>
+        <p>
+          From individual returns to corporate tax planning, we provide end-to-end support.
+          Our experts help reduce liabilities and ensure compliance with changing tax laws.
+        </p>
+      </div>
+
+      <div id="pf" style={detail}>
+        <h2>PF & ESI Compliance</h2>
+        <p>
+          Complete handling of employee compliance including PF & ESI registrations,
+          filings, and audits. We ensure your workforce compliance is always up to date.
+        </p>
+      </div>
+
+      <div id="roc" style={detailAlt}>
+        <h2>ROC Compliance</h2>
+        <p>
+          We manage company filings, annual returns, and statutory compliance with ROC.
+          Stay compliant and focus on growing your business while we handle governance.
+        </p>
       </div>
 
       {/* CONTACT */}
-      <div id="contact" style={{ padding: 60 }}>
-        <h2 style={{ textAlign: 'center', marginBottom: 30 }}>
-          Contact Us
-        </h2>
+      <div id="contact" style={section}>
+        <h2 style={title}>Contact Us</h2>
 
-        <div style={{
-          textAlign: 'center',
-          lineHeight: 2,
-          color: '#555'
-        }}>
+        <div style={contact}>
           <p><b>AIKYAM Corporate Services</b></p>
           <p>Vasavi MPM, Ameerpet, Hyderabad</p>
           <p>📞 +91 XXXXX XXXXX</p>
@@ -196,15 +114,128 @@ export default function Home() {
       </div>
 
       {/* FOOTER */}
-      <div style={{
-        padding: 25,
-        textAlign: 'center',
-        background: '#111',
-        color: '#fff'
-      }}>
-        © 2026 AIKYA Consultancy
+      <div style={footer}>
+        © 2026 AIKYAM Corporate Services
       </div>
 
     </div>
   )
+}
+
+/* STYLES */
+
+const container = {
+  fontFamily: 'Inter, sans-serif',
+  background: '#f8faff'
+}
+
+const header = {
+  position: 'sticky',
+  top: 0,
+  display: 'flex',
+  justifyContent: 'space-between',
+  padding: '18px 50px',
+  background: 'rgba(255,255,255,0.7)',
+  backdropFilter: 'blur(12px)',
+  zIndex: 1000
+}
+
+const nav = {
+  cursor: 'pointer',
+  fontWeight: 500
+}
+
+const loginBtn = {
+  padding: '8px 18px',
+  borderRadius: 8,
+  border: 'none',
+  background: '#0070f3',
+  color: '#fff'
+}
+
+const hero = {
+  textAlign: 'center',
+  padding: '120px 20px',
+  position: 'relative'
+}
+
+const glow = {
+  position: 'absolute',
+  width: 400,
+  height: 400,
+  background: 'radial-gradient(circle, #0070f3, transparent)',
+  filter: 'blur(120px)',
+  top: 0,
+  left: '50%',
+  transform: 'translateX(-50%)',
+  zIndex: -1
+}
+
+const heroTitle = {
+  fontSize: 54,
+  fontWeight: 700
+}
+
+const heroText = {
+  fontSize: 18,
+  color: '#555',
+  marginTop: 15
+}
+
+const cta = {
+  marginTop: 30,
+  padding: '14px 30px',
+  borderRadius: 10,
+  border: 'none',
+  background: '#0070f3',
+  color: '#fff',
+  cursor: 'pointer'
+}
+
+const section = {
+  padding: 70
+}
+
+const title = {
+  textAlign: 'center',
+  marginBottom: 40
+}
+
+const grid = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(250px,1fr))',
+  gap: 25
+}
+
+const card = {
+  padding: 30,
+  borderRadius: 16,
+  background: 'rgba(255,255,255,0.6)',
+  backdropFilter: 'blur(10px)',
+  cursor: 'pointer',
+  textAlign: 'center',
+  fontSize: 18,
+  transition: '0.3s'
+}
+
+const detail = {
+  padding: 80,
+  background: '#fff'
+}
+
+const detailAlt = {
+  padding: 80,
+  background: '#f1f5ff'
+}
+
+const contact = {
+  textAlign: 'center',
+  lineHeight: 2
+}
+
+const footer = {
+  padding: 25,
+  textAlign: 'center',
+  background: '#111',
+  color: '#fff'
 }
