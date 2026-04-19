@@ -135,42 +135,45 @@ export default function UserFilesPage() {
   }
 
   // 🗑 DELETE FOLDER (RECURSIVE)
-  const deleteFolder = async (folderId) => {
+ const deleteFolder = async (folderId, isRoot = false) => {
+  if (isRoot) {
     if (!confirm('Delete this folder and all its contents?')) return
+  }
 
-    // delete child files
-    const { data: files } = await supabase
-      .from('files')
-      .select('*')
-      .eq('folder_id', folderId)
+  // delete files
+  const { data: files } = await supabase
+    .from('files')
+    .select('*')
+    .eq('folder_id', folderId)
 
-    if (files?.length) {
-      await supabase.storage
-        .from('client-files')
-        .remove(files.map(f => f.file_path))
+  if (files?.length) {
+    await supabase.storage
+      .from('client-files')
+      .remove(files.map(f => f.file_path))
 
-      await supabase.from('files').delete().eq('folder_id', folderId)
+    await supabase.from('files').delete().eq('folder_id', folderId)
+  }
+
+  // delete subfolders WITHOUT confirmation
+  const { data: subfolders } = await supabase
+    .from('folders')
+    .select('*')
+    .eq('parent_id', folderId)
+
+  if (subfolders?.length) {
+    for (let sf of subfolders) {
+      await deleteFolder(sf.id, false)
     }
+  }
 
-    // delete subfolders
-    const { data: subfolders } = await supabase
-      .from('folders')
-      .select('*')
-      .eq('parent_id', folderId)
+  await supabase.from('folders').delete().eq('id', folderId)
 
-    if (subfolders?.length) {
-      for (let sf of subfolders) {
-        await deleteFolder(sf.id)
-      }
-    }
-
-    // delete folder itself
-    await supabase.from('folders').delete().eq('id', folderId)
-
+  if (isRoot) {
     setMessage('Folder deleted 🗑️')
     fetchFolders()
     fetchFiles()
   }
+}
 
   const openFolder = (f) => setFolderPath([...folderPath, f])
   const goBack = () => setFolderPath(folderPath.slice(0, -1))
@@ -217,14 +220,21 @@ export default function UserFilesPage() {
         <h3>Folders</h3>
         <div style={grid}>
           {folders.map(f => (
-            <div key={f.id} style={card}>
-              <div onClick={() => openFolder(f)}>
-                📁 {truncate(f.name)}
-              </div>
-              <button onClick={() => deleteFolder(f.id)} style={deleteBtn}>
-                Delete
-              </button>
-            </div>
+           <div key={f.id} style={cardRow}>
+  <div onClick={() => openFolder(f)} style={cardText}>
+    📁 {truncate(f.name)}
+  </div>
+
+  <span
+    onClick={(e) => {
+      e.stopPropagation()
+      deleteFolder(f.id, true)
+    }}
+    style={deleteIcon}
+  >
+    🗑️
+  </span>
+</div>
           ))}
         </div>
 
@@ -232,14 +242,25 @@ export default function UserFilesPage() {
         <h3>Files</h3>
         <div style={grid}>
           {files.map(f => (
-            <div key={f.id} style={card}>
-              <a href={getFileUrl(f.file_path)} target="_blank">
-                📄 {truncate(f.name)}
-              </a>
-              <button onClick={() => deleteFile(f)} style={deleteBtn}>
-                Delete
-              </button>
-            </div>
+          <div key={f.id} style={cardRow}>
+  <a
+    href={getFileUrl(f.file_path)}
+    target="_blank"
+    style={cardText}
+  >
+    📄 {truncate(f.name)}
+  </a>
+
+  <span
+    onClick={(e) => {
+      e.stopPropagation()
+      deleteFile(f)
+    }}
+    style={deleteIcon}
+  >
+    🗑️
+  </span>
+</div>
           ))}
         </div>
       </div>
@@ -264,10 +285,27 @@ const grid = {
   gap: 15
 }
 
-const card = {
-  padding: 15,
+const cardRow = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: 12,
   borderRadius: 10,
   background: 'rgba(255,255,255,0.15)'
+}
+const cardText = {
+  maxWidth: '120px',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  textDecoration: 'none',
+  color: '#fff'
+}
+const deleteIcon = {
+  cursor: 'pointer',
+  fontSize: 16,
+  opacity: 0.7,
+  transition: '0.2s'
 }
 
 const deleteBtn = {
