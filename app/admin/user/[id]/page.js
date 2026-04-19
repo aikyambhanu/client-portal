@@ -3,14 +3,12 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '../../../../lib/supabase'
-import Header from '../../../../components/Header'
 
 export default function UserFilesPage() {
   const { id } = useParams()
 
   const [files, setFiles] = useState([])
   const [folders, setFolders] = useState([])
-  const [folderName, setFolderName] = useState('')
   const [folderPath, setFolderPath] = useState([])
   const [dragActive, setDragActive] = useState(false)
 
@@ -43,12 +41,9 @@ export default function UserFilesPage() {
     setFolders(data || [])
   }
 
-  // 📄 Fetch files (FIXED ROOT ISSUE)
+  // 📄 Fetch files
   const fetchFiles = async () => {
-    let query = supabase
-      .from('files')
-      .select('*')
-      .eq('client_id', id)
+    let query = supabase.from('files').select('*').eq('client_id', id)
 
     if (currentFolder === null) {
       query = query.is('folder_id', null)
@@ -60,35 +55,17 @@ export default function UserFilesPage() {
     setFiles(data || [])
   }
 
-  // 📁 Create folder
-  const createFolder = async () => {
-    if (!folderName) return setMessage('Enter folder name')
-
-    await supabase.from('folders').insert([
-      {
-        name: folderName,
-        client_id: id,
-        parent_id: currentFolder?.id || null
-      }
-    ])
-
-    setFolderName('')
-    setMessage('Folder created ✅')
-    fetchFolders()
-  }
-
-  // 📤 Upload with progress simulation
+  // 📤 Upload
   const uploadFile = async (file, folderId) => {
     setUploading(true)
     setProgress(0)
 
     const filePath = `${id}/${Date.now()}-${file.name}`
 
-    // fake progress animation
-    let fakeProgress = 0
+    let fake = 0
     const interval = setInterval(() => {
-      fakeProgress += 10
-      setProgress(Math.min(fakeProgress, 90))
+      fake += 10
+      setProgress(Math.min(fake, 90))
     }, 200)
 
     const { error } = await supabase.storage
@@ -117,7 +94,6 @@ export default function UserFilesPage() {
     setMessage('Upload successful ✅')
   }
 
-  // 📤 Upload handler
   const handleUpload = async (e) => {
     const files = e.target.files
     for (let i = 0; i < files.length; i++) {
@@ -126,13 +102,11 @@ export default function UserFilesPage() {
     fetchFiles()
   }
 
-  // 🟦 Drag drop
   const handleDrop = async (e) => {
     e.preventDefault()
     setDragActive(false)
 
     const files = e.dataTransfer.files
-
     for (let i = 0; i < files.length; i++) {
       await uploadFile(files[i], currentFolder?.id || null)
     }
@@ -140,17 +114,7 @@ export default function UserFilesPage() {
     fetchFiles()
   }
 
-  const handleDragOver = (e) => {
-    e.preventDefault()
-    setDragActive(true)
-  }
-
-  const handleDragLeave = () => setDragActive(false)
-
-  // 🗑 Delete file
   const deleteFile = async (file) => {
-    if (!confirm('Delete this file?')) return
-
     await supabase.storage
       .from('client-files')
       .remove([file.file_path])
@@ -161,125 +125,172 @@ export default function UserFilesPage() {
     fetchFiles()
   }
 
-  // 🔗 URL
   const getFileUrl = (path) => {
     return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/client-files/${path}`
   }
 
-  // 📂 Navigation
   const openFolder = (folder) => {
     setFolderPath([...folderPath, folder])
   }
 
   const goBack = () => {
-    const newPath = [...folderPath]
-    newPath.pop()
-    setFolderPath(newPath)
-  }
-
-  const goToLevel = (index) => {
-    setFolderPath(folderPath.slice(0, index + 1))
+    setFolderPath(folderPath.slice(0, -1))
   }
 
   return (
-    <div>
-      <Header />
+    <div style={container}>
 
-      <div style={{ padding: 30, maxWidth: 1000, margin: 'auto' }}>
-        <h2>User File Manager</h2>
+      {/* SIDEBAR */}
+      <div style={sidebar}>
+        <h3>📁 Upload Panel</h3>
 
-        {/* MESSAGE */}
-        {message && (
-          <div style={{ marginBottom: 10, color: 'green' }}>
-            {message}
+        <div style={navItem} onClick={() => setFolderPath([])}>
+          Root
+        </div>
+
+        {folderPath.length > 0 && (
+          <div style={navItem} onClick={goBack}>
+            ⬅ Back
           </div>
         )}
+      </div>
 
-        {/* Breadcrumb */}
-        <div>
-          <button onClick={() => setFolderPath([])}>Root</button>
+      {/* MAIN */}
+      <div style={{ flex: 1, padding: 25 }}>
+
+        <h2>Upload Files</h2>
+
+        {/* MESSAGE */}
+        {message && <p style={{ color: '#0f0' }}>{message}</p>}
+
+        {/* BREADCRUMB */}
+        <div style={{ marginBottom: 20 }}>
+          <span style={crumb} onClick={() => setFolderPath([])}>Root</span>
+
           {folderPath.map((f, i) => (
             <span key={f.id}>
-              {' > '}
-              <button onClick={() => goToLevel(i)}>{f.name}</button>
+              {' › '}
+              <span
+                style={crumb}
+                onClick={() => setFolderPath(folderPath.slice(0, i + 1))}
+              >
+                {f.name}
+              </span>
             </span>
           ))}
         </div>
 
-        {folderPath.length > 0 && (
-          <button onClick={goBack}>⬅ Back</button>
-        )}
-
-        <hr />
-
-        {/* Create Folder */}
-        <input
-          placeholder="Folder name"
-          value={folderName}
-          onChange={(e) => setFolderName(e.target.value)}
-        />
-        <button onClick={createFolder}>Create Folder</button>
-
-        <hr />
-
-        {/* Upload Area */}
+        {/* UPLOAD AREA */}
         <div
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
+          onDragOver={(e) => {
+            e.preventDefault()
+            setDragActive(true)
+          }}
+          onDragLeave={() => setDragActive(false)}
           onDrop={handleDrop}
           style={{
             border: '2px dashed #aaa',
-            padding: 30,
+            padding: 40,
             textAlign: 'center',
-            background: dragActive ? '#eef6ff' : '#fff'
+            borderRadius: 12,
+            background: dragActive
+              ? 'rgba(255,255,255,0.2)'
+              : 'rgba(255,255,255,0.1)'
           }}
         >
-          Drag & Drop files or
+          Drag & Drop files
           <br />
           <input type="file" multiple onChange={handleUpload} />
         </div>
 
-        {/* Progress */}
+        {/* PROGRESS */}
         {uploading && (
           <div style={{ marginTop: 10 }}>
             Uploading... {progress}%
-            <div style={{
-              height: 6,
-              background: '#ddd',
-              marginTop: 5
-            }}>
+            <div style={{ height: 6, background: '#444' }}>
               <div style={{
                 width: `${progress}%`,
                 height: '100%',
-                background: 'green'
+                background: '#00ffcc'
               }} />
             </div>
           </div>
         )}
 
-        <hr />
+        {/* FOLDERS */}
+        <h3 style={{ marginTop: 25 }}>Folders</h3>
+        <div style={grid}>
+          {folders.map(f => (
+            <div key={f.id} style={card} onClick={() => openFolder(f)}>
+              📁 {f.name}
+            </div>
+          ))}
+        </div>
 
-        {/* Folders */}
-        <h4>Folders</h4>
-        {folders.map(f => (
-          <div key={f.id} onClick={() => openFolder(f)} style={{ cursor: 'pointer' }}>
-            📁 {f.name}
-          </div>
-        ))}
+        {/* FILES */}
+        <h3 style={{ marginTop: 25 }}>Files</h3>
+        <div style={grid}>
+          {files.map(f => (
+            <div key={f.id} style={card}>
+              <a href={getFileUrl(f.file_path)} target="_blank">
+                📄 {f.name}
+              </a>
+              <br />
+              <button onClick={() => deleteFile(f)} style={deleteBtn}>
+                Delete
+              </button>
+            </div>
+          ))}
+        </div>
 
-        <hr />
-
-        {/* Files */}
-        <h4>Files</h4>
-        {files.map(f => (
-          <div key={f.id} style={{ display: 'flex', gap: 10 }}>
-            <a href={getFileUrl(f.file_path)} target="_blank">
-              📄 {f.name}
-            </a>
-            <button onClick={() => deleteFile(f)}>Delete</button>
-          </div>
-        ))}
       </div>
     </div>
   )
+}
+
+/* STYLES */
+
+const container = {
+  display: 'flex',
+  minHeight: '100vh',
+  background: 'linear-gradient(135deg, #1e3c72, #2a5298)',
+  color: '#fff'
+}
+
+const sidebar = {
+  width: 220,
+  padding: 20,
+  background: 'rgba(255,255,255,0.1)'
+}
+
+const navItem = {
+  marginTop: 10,
+  cursor: 'pointer'
+}
+
+const grid = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(150px,1fr))',
+  gap: 15
+}
+
+const card = {
+  padding: 15,
+  borderRadius: 10,
+  background: 'rgba(255,255,255,0.15)',
+  cursor: 'pointer'
+}
+
+const deleteBtn = {
+  marginTop: 5,
+  background: '#ff4d4f',
+  border: 'none',
+  padding: '5px 10px',
+  color: '#fff',
+  cursor: 'pointer',
+  borderRadius: 6
+}
+
+const crumb = {
+  cursor: 'pointer'
 }
