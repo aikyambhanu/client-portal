@@ -8,13 +8,18 @@ export default function LoginPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState('')
+  const [errorMsg, setErrorMsg] = useState('')
   const [loading, setLoading] = useState(false)
 
   const router = useRouter()
 
   const handleLogin = async () => {
-    setError('')
+    if (!username || !password) {
+      setErrorMsg('Please enter username and password')
+      return
+    }
+
+    setErrorMsg('')
     setLoading(true)
 
     const { data, error } = await supabase
@@ -24,25 +29,27 @@ export default function LoginPage() {
       .single()
 
     if (error || !data) {
-      setError('Invalid username')
+      setErrorMsg('Invalid username')
       setLoading(false)
       return
     }
 
     if (!data.is_active) {
-      setError('Account is disabled')
+      setErrorMsg('Account is disabled')
       setLoading(false)
       return
     }
 
     if (data.password !== password) {
-      setError('Incorrect password')
+      setErrorMsg('Incorrect password')
       setLoading(false)
       return
     }
 
+    // ✅ store session
     localStorage.setItem('user', JSON.stringify(data))
 
+    // ✅ ROLE BASED REDIRECT
     if (data.role === 'admin') {
       router.push('/admin')
     } else {
@@ -50,39 +57,19 @@ export default function LoginPage() {
     }
   }
 
+  // ✅ ENTER KEY SUPPORT
+  const handleKey = (e) => {
+    if (e.key === 'Enter') handleLogin()
+  }
+
   return (
-    <div style={{
-      height: '100vh',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      background: 'linear-gradient(135deg, #1e3c72, #2a5298)',
-      fontFamily: 'Inter, sans-serif'
-    }}>
+    <div style={container}>
 
-      {/* CARD */}
-      <div style={{
-        width: 380,
-        padding: 35,
-        borderRadius: 16,
-        background: 'rgba(255,255,255,0.15)',
-        backdropFilter: 'blur(15px)',
-        border: '1px solid rgba(255,255,255,0.2)',
-        boxShadow: '0 15px 40px rgba(0,0,0,0.2)',
-        color: '#fff'
-      }}>
+      <div style={card}>
 
-        {/* TITLE */}
-        <h2 style={{ textAlign: 'center', marginBottom: 5 }}>
-          Welcome 👋
-        </h2>
+        <h2 style={title}>Welcome 👋</h2>
 
-        <p style={{
-          textAlign: 'center',
-          fontSize: 14,
-          marginBottom: 25,
-          opacity: 0.8
-        }}>
+        <p style={subtitle}>
           Secure client portal access
         </p>
 
@@ -92,8 +79,8 @@ export default function LoginPage() {
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+            onKeyDown={handleKey}
             style={floatingInput}
-            required
           />
           <label style={{
             ...floatingLabel,
@@ -110,8 +97,8 @@ export default function LoginPage() {
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={handleKey}
             style={floatingInput}
-            required
           />
 
           <label style={{
@@ -122,61 +109,33 @@ export default function LoginPage() {
             Password
           </label>
 
-          {/* 👁️ Toggle */}
           <span
             onClick={() => setShowPassword(!showPassword)}
-            style={{
-              position: 'absolute',
-              right: 12,
-              top: 12,
-              cursor: 'pointer',
-              fontSize: 14
-            }}
+            style={eye}
           >
             {showPassword ? '🙈' : '👁️'}
           </span>
         </div>
 
-        {/* ERROR MESSAGE */}
-        {error && (
-          <div style={{
-            color: '#ffb3b3',
-            fontSize: 13,
-            marginBottom: 10
-          }}>
-            {error}
-          </div>
+        {/* ERROR */}
+        {errorMsg && (
+          <div style={errorStyle}>{errorMsg}</div>
         )}
 
         {/* BUTTON */}
         <button
           onClick={handleLogin}
+          disabled={loading}
           style={{
-            width: '100%',
-            padding: 12,
-            marginTop: 10,
-            background: '#00c6ff',
-            backgroundImage: 'linear-gradient(to right, #00c6ff, #0072ff)',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 8,
-            cursor: 'pointer',
-            fontWeight: 600,
-            transition: '0.3s'
+            ...button,
+            opacity: loading ? 0.7 : 1
           }}
-          onMouseOver={e => e.target.style.transform = 'scale(1.03)'}
-          onMouseOut={e => e.target.style.transform = 'scale(1)'}
         >
           {loading ? 'Signing in...' : 'Login'}
         </button>
 
         {/* QUOTES */}
-        <div style={{
-          marginTop: 20,
-          fontSize: 13,
-          opacity: 0.85,
-          lineHeight: 1.6
-        }}>
+        <div style={quotes}>
           <p>• "Compliance today prevents penalties tomorrow."</p>
           <p>• "Smart finance decisions build strong businesses."</p>
         </div>
@@ -187,6 +146,38 @@ export default function LoginPage() {
 }
 
 /* STYLES */
+
+const container = {
+  height: '100vh',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  background: 'linear-gradient(135deg, #1e3c72, #2a5298)',
+  fontFamily: 'Inter, sans-serif'
+}
+
+const card = {
+  width: 380,
+  padding: 35,
+  borderRadius: 16,
+  background: 'rgba(255,255,255,0.15)',
+  backdropFilter: 'blur(15px)',
+  border: '1px solid rgba(255,255,255,0.2)',
+  boxShadow: '0 15px 40px rgba(0,0,0,0.2)',
+  color: '#fff'
+}
+
+const title = {
+  textAlign: 'center',
+  marginBottom: 5
+}
+
+const subtitle = {
+  textAlign: 'center',
+  fontSize: 14,
+  marginBottom: 25,
+  opacity: 0.8
+}
 
 const floatingContainer = {
   position: 'relative',
@@ -210,4 +201,37 @@ const floatingLabel = {
   padding: '0 4px',
   color: '#ddd',
   transition: '0.2s'
+}
+
+const eye = {
+  position: 'absolute',
+  right: 12,
+  top: 12,
+  cursor: 'pointer',
+  fontSize: 14
+}
+
+const button = {
+  width: '100%',
+  padding: 12,
+  marginTop: 10,
+  background: 'linear-gradient(to right, #00c6ff, #0072ff)',
+  color: '#fff',
+  border: 'none',
+  borderRadius: 8,
+  cursor: 'pointer',
+  fontWeight: 600
+}
+
+const errorStyle = {
+  color: '#ffb3b3',
+  fontSize: 13,
+  marginBottom: 10
+}
+
+const quotes = {
+  marginTop: 20,
+  fontSize: 13,
+  opacity: 0.85,
+  lineHeight: 1.6
 }
