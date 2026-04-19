@@ -124,7 +124,16 @@ export default function AdminPage() {
         )}
 
         {filteredUsers.map((u) => (
-          <div key={u.id} style={userRow}>
+          <div
+  key={u.id}
+  style={userRow}
+  onMouseOver={(e) => {
+    e.currentTarget.style.background = 'rgba(255,255,255,0.15)'
+  }}
+  onMouseOut={(e) => {
+    e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
+  }}
+>
 
             <div>
               <b>{u.client_name}</b><br />
@@ -220,12 +229,6 @@ const userRow = {
   transition: '0.3s',
   cursor: 'pointer'
 }
-onMouseOver={(e) => {
-  e.currentTarget.style.background = 'rgba(255,255,255,0.15)'
-}}
-onMouseOut={(e) => {
-  e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
-}}
 
 const primaryBtn = {
   padding: '10px 20px',
