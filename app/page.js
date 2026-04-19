@@ -21,8 +21,20 @@ export default function Home() {
             <span key={item} onClick={() => scrollTo(item)} style={nav}>
               {item.toUpperCase()}
             </span>
-          ))}
-          <a href="/login"><button style={loginBtn}>Login</button></a>
+          ))}<a
+  href="/login"
+  style={navLink}
+  onMouseOver={(e) => {
+    e.currentTarget.style.color = '#0070f3'
+    e.currentTarget.style.borderBottom = '2px solid #0070f3'
+  }}
+  onMouseOut={(e) => {
+    e.currentTarget.style.color = '#333'
+    e.currentTarget.style.borderBottom = 'none'
+  }}
+>
+  LOGIN
+</a>
         </div>
       </div>
 
@@ -137,7 +149,7 @@ export default function Home() {
         <div style={contact}>
           <p><b>AIKYAM Corporate Services</b></p>
           <p>Vasavi MPM, Ameerpet, Hyderabad</p>
-          <p>📞 +91 XXXXX XXXXX</p>
+          <p>📞 +91 92915 02262</p>
           <p>✉ info@aikyamcs.com</p>
         </div>
       </div>
@@ -170,15 +182,16 @@ const header = {
   borderBottom: '1px solid rgba(0,0,0,0.06)',
   zIndex: 1000
 }
-const nav = {
-  cursor: 'pointer',
+const navLink = {
+  textDecoration: 'none',
   fontWeight: 600,
   fontSize: 13,
   letterSpacing: '1px',
   color: '#333',
+  position: 'relative',
+  paddingBottom: 4,
   transition: '0.3s'
 }
-
 const loginBtn = {
   padding: '8px 18px',
   borderRadius: 8,
