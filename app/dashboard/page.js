@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation'
 export default function Dashboard() {
   const [folders, setFolders] = useState([])
   const [files, setFiles] = useState([])
-
   const [folderPath, setFolderPath] = useState([])
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState('name')
@@ -32,12 +31,8 @@ export default function Dashboard() {
     }
   }, [clientId, currentFolder])
 
-  // 📁 Fetch folders
   const fetchFolders = async () => {
-    let query = supabase
-      .from('folders')
-      .select('*')
-      .eq('client_id', clientId)
+    let query = supabase.from('folders').select('*').eq('client_id', clientId)
 
     if (currentFolder === null) {
       query = query.is('parent_id', null)
@@ -49,12 +44,8 @@ export default function Dashboard() {
     setFolders(data || [])
   }
 
-  // 📄 Fetch files (FIXED ROOT ISSUE)
   const fetchFiles = async () => {
-    let query = supabase
-      .from('files')
-      .select('*')
-      .eq('client_id', clientId)
+    let query = supabase.from('files').select('*').eq('client_id', clientId)
 
     if (currentFolder === null) {
       query = query.is('folder_id', null)
@@ -66,7 +57,7 @@ export default function Dashboard() {
     setFiles(data || [])
   }
 
-  // 🔍 FILTER + SORT
+  // 🔍 Filter + Sort
   const filteredFiles = files
     .filter(f => f.name.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
@@ -75,13 +66,10 @@ export default function Dashboard() {
       return 0
     })
 
-  // 📄 File icons
   const getIcon = (name) => {
     if (name.endsWith('.pdf')) return '📕'
-    if (name.match(/\.(jpg|jpeg|png|webp)$/)) return '🖼️'
-    if (name.match(/\.(xls|xlsx)$/)) return '📊'
-    if (name.match(/\.(doc|docx)$/)) return '📄'
-    return '📁'
+    if (name.match(/\.(jpg|jpeg|png)$/)) return '🖼️'
+    return '📄'
   }
 
   const getFileUrl = (path) => {
@@ -90,6 +78,10 @@ export default function Dashboard() {
 
   const openFolder = (folder) => {
     setFolderPath([...folderPath, folder])
+  }
+
+  const goBack = () => {
+    setFolderPath(folderPath.slice(0, -1))
   }
 
   const logout = () => {
@@ -107,9 +99,9 @@ export default function Dashboard() {
 
       {/* SIDEBAR */}
       <div style={{
-        width: 240,
+        width: 220,
         padding: 20,
-        background: 'rgba(255,255,255,0.1)',
+        background: 'rgba(255,255,255,0.08)',
         backdropFilter: 'blur(10px)'
       }}>
         <h3>📁 My Drive</h3>
@@ -117,33 +109,52 @@ export default function Dashboard() {
         <div onClick={() => setFolderPath([])} style={navItem}>
           Root
         </div>
-
-        {folderPath.length > 0 && (
-          <div onClick={() => setFolderPath(folderPath.slice(0, -1))} style={navItem}>
-            ⬅ Back
-          </div>
-        )}
       </div>
 
       {/* MAIN */}
-      <div style={{ flex: 1, padding: 20 }}>
+      <div style={{ flex: 1, padding: 25 }}>
 
         {/* TOP BAR */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
+          alignItems: 'center',
           marginBottom: 20
         }}>
-          <h2>My Documents</h2>
-          <button onClick={logout} style={logoutBtn}>Logout</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
+            {folderPath.length > 0 && (
+              <button onClick={goBack} style={backBtn}>←</button>
+            )}
+
+            <h2>Documents</h2>
+          </div>
+
+          <button onClick={logout} style={logoutBtn}>
+            Logout
+          </button>
+        </div>
+
+        {/* BREADCRUMB */}
+        <div style={{ marginBottom: 20, opacity: 0.8 }}>
+          <span onClick={() => setFolderPath([])} style={crumb}>
+            Root
+          </span>
+
+          {folderPath.map((f, i) => (
+            <span key={f.id}>
+              {' › '}
+              <span
+                style={crumb}
+                onClick={() => setFolderPath(folderPath.slice(0, i + 1))}
+              >
+                {f.name}
+              </span>
+            </span>
+          ))}
         </div>
 
         {/* SEARCH + SORT */}
-        <div style={{
-          display: 'flex',
-          gap: 10,
-          marginBottom: 20
-        }}>
+        <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
           <input
             placeholder="Search files..."
             value={search}
@@ -157,31 +168,12 @@ export default function Dashboard() {
           </select>
         </div>
 
-        {/* BREADCRUMB */}
-        <div style={{ marginBottom: 20 }}>
-          <span onClick={() => setFolderPath([])} style={{ cursor: 'pointer' }}>
-            Root
-          </span>
-
-          {folderPath.map((f, i) => (
-            <span key={f.id}>
-              {' > '}
-              <span
-                onClick={() => setFolderPath(folderPath.slice(0, i + 1))}
-                style={{ cursor: 'pointer' }}
-              >
-                {f.name}
-              </span>
-            </span>
-          ))}
-        </div>
-
         {/* FOLDERS */}
         <h3>Folders</h3>
         <div style={grid}>
           {folders.map(f => (
             <div key={f.id} style={card} onClick={() => openFolder(f)}>
-              📁 {f.name}
+              📁 {truncate(f.name)}
             </div>
           ))}
         </div>
@@ -196,7 +188,7 @@ export default function Dashboard() {
               target="_blank"
               style={card}
             >
-              {getIcon(f.name)} {f.name}
+              {getIcon(f.name)} {truncate(f.name)}
             </a>
           ))}
         </div>
@@ -205,6 +197,10 @@ export default function Dashboard() {
     </div>
   )
 }
+
+/* HELPERS */
+const truncate = (text) =>
+  text.length > 18 ? text.slice(0, 18) + '...' : text
 
 /* STYLES */
 
@@ -215,14 +211,16 @@ const grid = {
 }
 
 const card = {
-  padding: 20,
+  padding: 15,
   borderRadius: 12,
   background: 'rgba(255,255,255,0.15)',
   backdropFilter: 'blur(10px)',
   cursor: 'pointer',
   textDecoration: 'none',
   color: '#fff',
-  transition: '0.3s'
+  transition: '0.3s',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden'
 }
 
 const navItem = {
@@ -233,18 +231,29 @@ const navItem = {
   background: 'rgba(255,255,255,0.1)'
 }
 
-const logoutBtn = {
-  padding: '8px 14px',
-  borderRadius: 6,
-  border: 'none',
-  cursor: 'pointer',
-  background: '#ff4d4f',
-  color: '#fff'
-}
-
 const searchBox = {
   padding: 10,
   borderRadius: 8,
   border: 'none',
   outline: 'none'
+}
+
+const crumb = {
+  cursor: 'pointer'
+}
+
+const backBtn = {
+  padding: '6px 10px',
+  borderRadius: 6,
+  border: 'none',
+  cursor: 'pointer'
+}
+
+const logoutBtn = {
+  padding: '8px 16px',
+  borderRadius: 20,
+  border: 'none',
+  cursor: 'pointer',
+  background: 'linear-gradient(to right, #ff4d4f, #ff7875)',
+  color: '#fff'
 }
