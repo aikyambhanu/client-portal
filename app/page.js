@@ -49,19 +49,48 @@ export default function Home() {
         <h2 style={title}>Our Services</h2>
 
         <div style={grid}>
-          {[
-            { id: 'gst', title: 'GST Filing' },
-            { id: 'tax', title: 'Income Tax' },
-            { id: 'pf', title: 'PF & ESI' },
-            { id: 'roc', title: 'ROC Compliance' }
-          ].map((s) => (
-            <div
-              key={s.id}
-              style={card}
-              onClick={() => scrollTo(s.id)}
-            >
-              {s.title}
-            </div>
+          {
+[
+  {
+    id: 'gst',
+    title: 'GST Filing',
+    gradient: 'linear-gradient(135deg, #667eea, #764ba2)'
+  },
+  {
+    id: 'tax',
+    title: 'Income Tax',
+    gradient: 'linear-gradient(135deg, #43cea2, #185a9d)'
+  },
+  {
+    id: 'pf',
+    title: 'PF & ESI',
+    gradient: 'linear-gradient(135deg, #ff9966, #ff5e62)'
+  },
+  {
+    id: 'roc',
+    title: 'ROC Compliance',
+    gradient: 'linear-gradient(135deg, #00c6ff, #0072ff)'
+  }
+]
+            .map((s) => (
+       <div
+  key={s.id}
+  style={{
+    ...card,
+    background: s.gradient
+  }}
+  onClick={() => scrollTo(s.id)}
+  onMouseOver={(e) => {
+    e.currentTarget.style.transform = 'translateY(-8px)'
+    e.currentTarget.style.boxShadow = '0 20px 50px rgba(0,0,0,0.2)'
+  }}
+  onMouseOut={(e) => {
+    e.currentTarget.style.transform = 'translateY(0)'
+    e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.1)'
+  }}
+>
+  {s.title}
+</div>
           ))}
         </div>
       </div>
@@ -209,13 +238,13 @@ const grid = {
 
 const card = {
   padding: 30,
-  borderRadius: 16,
-  background: 'rgba(255,255,255,0.6)',
-  backdropFilter: 'blur(10px)',
+  borderRadius: 18,
   cursor: 'pointer',
   textAlign: 'center',
   fontSize: 18,
-  transition: '0.3s'
+  color: '#fff',
+  transition: '0.3s',
+  boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
 }
 
 const detail = {
