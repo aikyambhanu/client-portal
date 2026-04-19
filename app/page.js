@@ -11,8 +11,8 @@ export default function Home() {
 
       {/* HEADER */}
       <div style={header}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <img src="/companylogo.png" width="45" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <img src="/companylogo.png" style={{ height: 42 }} />
           <h2>AIKYAM Corporate Services</h2>
         </div>
 
@@ -163,15 +163,20 @@ const header = {
   top: 0,
   display: 'flex',
   justifyContent: 'space-between',
-  padding: '18px 50px',
-  background: 'rgba(255,255,255,0.7)',
-  backdropFilter: 'blur(12px)',
+  alignItems: 'center',
+  padding: '14px 60px',
+  background: 'rgba(255,255,255,0.85)',
+  backdropFilter: 'blur(14px)',
+  borderBottom: '1px solid rgba(0,0,0,0.06)',
   zIndex: 1000
 }
-
 const nav = {
   cursor: 'pointer',
-  fontWeight: 500
+  fontWeight: 600,
+  fontSize: 13,
+  letterSpacing: '1px',
+  color: '#333',
+  transition: '0.3s'
 }
 
 const loginBtn = {
