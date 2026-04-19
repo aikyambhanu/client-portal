@@ -16,12 +16,26 @@ export default function Home() {
           <h2>AIKYAM Corporate Services</h2>
         </div>
 
-        <div style={{ display: 'flex', gap: 25 }}>
-          {['services', 'contact'].map(item => (
-            <span key={item} onClick={() => scrollTo(item)} style={navLink}>
-              {item.toUpperCase()}
-            </span>
-          ))}<a
+        <div style={{ display: 'flex', gap: 30, alignItems: 'center' }}>
+
+  <span
+    style={navLink}
+    onClick={() => scrollTo('services')}
+    onMouseOver={(e) => hoverOn(e)}
+    onMouseOut={(e) => hoverOff(e)}
+  >
+    SERVICES
+  </span>
+
+  <span
+    style={navLink}
+    onClick={() => scrollTo('contact')}
+    onMouseOver={(e) => hoverOn(e)}
+    onMouseOut={(e) => hoverOff(e)}
+  >
+    CONTACT
+  </span>
+<a
   href="/login"
   style={navLink}
   onMouseOver={(e) => {
