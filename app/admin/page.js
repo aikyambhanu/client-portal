@@ -10,6 +10,22 @@ export default function AdminPage() {
 
   const router = useRouter()
 
+useEffect(() => {
+  const user = JSON.parse(localStorage.getItem('user'))
+
+  // ❌ Not logged in
+  if (!user) {
+    router.push('/login')
+    return
+  }
+
+  // ❌ Not admin
+  if (user.role !== 'admin') {
+    router.push('/dashboard')
+  }
+
+}, [])
+
   const [form, setForm] = useState({
     username: '',
     password: '',
