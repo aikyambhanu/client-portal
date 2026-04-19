@@ -192,15 +192,17 @@ const getSecureUrl = async (path) => {
         <h3 style={{ marginTop: 30 }}>Files</h3>
         <div style={grid}>
           {filteredFiles.map(f => (
-          <span
-  onClick={async () => {
-    const url = await getSecureUrl(f.file_path)
-    if (url) window.open(url, '_blank')
-  }}
-  style={{ cursor: 'pointer' }}
->
-              {getIcon(f.name)} {truncate(f.name)}
-            </a>
+          <div style={card}>
+  <span
+    onClick={async () => {
+      const url = await getSecureUrl(f.file_path)
+      if (url) window.open(url, '_blank')
+    }}
+    style={{ cursor: 'pointer' }}
+  >
+    {getIcon(f.name)} {truncate(f.name)}
+  </span>
+</div>
           ))}
         </div>
 
