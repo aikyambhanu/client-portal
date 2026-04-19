@@ -13,7 +13,6 @@ export default function UserFilesPage() {
   const [dragActive, setDragActive] = useState(false)
 
   const [uploading, setUploading] = useState(false)
-  const [progress, setProgress] = useState(0)
   const [message, setMessage] = useState('')
 
   const currentFolder = folderPath.length
@@ -55,30 +54,40 @@ export default function UserFilesPage() {
     setFiles(data || [])
   }
 
-  // 📤 Upload
-  const uploadFile = async (file, folderId) => {
-    setUploading(true)
-    setProgress(0)
+  // 🔁 CREATE OR GET FOLDER
+  const getOrCreateFolder = async (name, parentId) => {
+    const { data: existing } = await supabase
+      .from('folders')
+      .select('*')
+      .eq('client_id', id)
+      .eq('name', name)
+      .eq('parent_id', parentId)
 
+    if (existing && existing.length > 0) {
+      return existing[0].id
+    }
+
+    const { data } = await supabase
+      .from('folders')
+      .insert([
+        {
+          name,
+          client_id: id,
+          parent_id: parentId
+        }
+      ])
+      .select()
+
+    return data[0].id
+  }
+
+  // 📤 UPLOAD FILE
+  const uploadFile = async (file, folderId) => {
     const filePath = `${id}/${Date.now()}-${file.name}`
 
-    let fake = 0
-    const interval = setInterval(() => {
-      fake += 10
-      setProgress(Math.min(fake, 90))
-    }, 200)
-
-    const { error } = await supabase.storage
+    await supabase.storage
       .from('client-files')
       .upload(filePath, file)
-
-    clearInterval(interval)
-
-    if (error) {
-      setUploading(false)
-      setMessage(error.message)
-      return
-    }
 
     await supabase.from('files').insert([
       {
@@ -88,40 +97,46 @@ export default function UserFilesPage() {
         folder_id: folderId
       }
     ])
-
-    setProgress(100)
-    setUploading(false)
-    setMessage('Upload successful ✅')
   }
 
-  const handleUpload = async (e) => {
-    const files = e.target.files
-    for (let i = 0; i < files.length; i++) {
-      await uploadFile(files[i], currentFolder?.id || null)
+  // 📁 RECURSIVE FOLDER HANDLER
+  const traverseFileTree = async (item, parentId) => {
+    if (item.isFile) {
+      item.file(async (file) => {
+        await uploadFile(file, parentId)
+      })
+    } else if (item.isDirectory) {
+      const newFolderId = await getOrCreateFolder(item.name, parentId)
+
+      const dirReader = item.createReader()
+
+      dirReader.readEntries(async (entries) => {
+        for (let entry of entries) {
+          await traverseFileTree(entry, newFolderId)
+        }
+      })
     }
-    fetchFiles()
   }
 
+  // 🟦 HANDLE DROP (FOLDER SUPPORT)
   const handleDrop = async (e) => {
     e.preventDefault()
     setDragActive(false)
+    setUploading(true)
+    setMessage('Uploading folder...')
 
-    const files = e.dataTransfer.files
-    for (let i = 0; i < files.length; i++) {
-      await uploadFile(files[i], currentFolder?.id || null)
+    const items = e.dataTransfer.items
+
+    for (let i = 0; i < items.length; i++) {
+      const entry = items[i].webkitGetAsEntry()
+      if (entry) {
+        await traverseFileTree(entry, currentFolder?.id || null)
+      }
     }
 
-    fetchFiles()
-  }
-
-  const deleteFile = async (file) => {
-    await supabase.storage
-      .from('client-files')
-      .remove([file.file_path])
-
-    await supabase.from('files').delete().eq('id', file.id)
-
-    setMessage('File deleted 🗑️')
+    setUploading(false)
+    setMessage('Upload complete ✅')
+    fetchFolders()
     fetchFiles()
   }
 
@@ -146,7 +161,6 @@ export default function UserFilesPage() {
       {/* SIDEBAR */}
       <div style={sidebar}>
         <h3>📁 Upload Panel</h3>
-
         <div style={navItem} onClick={() => setFolderPath([])}>
           Root
         </div>
@@ -155,7 +169,7 @@ export default function UserFilesPage() {
       {/* MAIN */}
       <div style={{ flex: 1, padding: 25 }}>
 
-        {/* TOP BAR */}
+        {/* TOP */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {folderPath.length > 0 && (
             <button onClick={goBack} style={backBtn}>←</button>
@@ -163,8 +177,7 @@ export default function UserFilesPage() {
           <h2>Upload Files</h2>
         </div>
 
-        {/* MESSAGE */}
-        {message && <p style={{ color: '#0f0' }}>{message}</p>}
+        {message && <p>{message}</p>}
 
         {/* BREADCRUMB */}
         <div style={{ marginBottom: 20 }}>
@@ -183,7 +196,7 @@ export default function UserFilesPage() {
           ))}
         </div>
 
-        {/* UPLOAD AREA */}
+        {/* DROP ZONE */}
         <div
           onDragOver={(e) => {
             e.preventDefault()
@@ -201,34 +214,8 @@ export default function UserFilesPage() {
               : 'rgba(255,255,255,0.1)'
           }}
         >
-          <div style={{ marginBottom: 10 }}>
-            Drag & Drop files
-          </div>
-
-          <input
-            type="file"
-            multiple
-            onChange={handleUpload}
-            style={{
-              display: 'block',
-              margin: '10px auto 0'
-            }}
-          />
+          Drag & Drop folders or files
         </div>
-
-        {/* PROGRESS */}
-        {uploading && (
-          <div style={{ marginTop: 10 }}>
-            Uploading... {progress}%
-            <div style={{ height: 6, background: '#444' }}>
-              <div style={{
-                width: `${progress}%`,
-                height: '100%',
-                background: '#00ffcc'
-              }} />
-            </div>
-          </div>
-        )}
 
         {/* FOLDERS */}
         <h3 style={{ marginTop: 25 }}>Folders</h3>
@@ -248,10 +235,6 @@ export default function UserFilesPage() {
               <a href={getFileUrl(f.file_path)} target="_blank">
                 📄 {truncate(f.name)}
               </a>
-              <br />
-              <button onClick={() => deleteFile(f)} style={deleteBtn}>
-                Delete
-              </button>
             </div>
           ))}
         </div>
@@ -296,16 +279,6 @@ const card = {
   whiteSpace: 'nowrap',
   overflow: 'hidden',
   textOverflow: 'ellipsis'
-}
-
-const deleteBtn = {
-  marginTop: 5,
-  background: '#ff4d4f',
-  border: 'none',
-  padding: '5px 10px',
-  color: '#fff',
-  cursor: 'pointer',
-  borderRadius: 6
 }
 
 const crumb = {
