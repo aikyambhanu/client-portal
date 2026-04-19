@@ -197,14 +197,15 @@ const header = {
   zIndex: 1000
 }
 const navLink = {
-  textDecoration: 'none',
+  cursor: 'pointer',   // ✅ THIS is the fix
   fontWeight: 600,
   fontSize: 13,
   letterSpacing: '1px',
   color: '#333',
-  position: 'relative',
   paddingBottom: 4,
-  transition: '0.3s'
+  textDecoration: 'none',
+  transition: '0.3s',
+  display: 'inline-block'  // ✅ ensures proper hover area
 }
 const loginBtn = {
   padding: '8px 18px',
