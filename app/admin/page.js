@@ -118,7 +118,9 @@ export default function AdminPage() {
 
         {/* USERS */}
         {filteredUsers.length === 0 && (
-          <p style={{ opacity: 0.7 }}>No users found</p>
+          <p style={{ textAlign: 'center', marginTop: 20, opacity: 0.7 }}>
+  No matching clients found
+</p>
         )}
 
         {filteredUsers.map((u) => (
@@ -128,26 +130,45 @@ export default function AdminPage() {
               <b>{u.client_name}</b><br />
               <span style={subText}>{u.username}</span><br />
               <span style={subText}>{u.email || 'No Email'}</span>
+              <span style={subText}>{u.company_name || '—'}</span>
             </div>
 
             <div>{u.phone}</div>
 
             {/* STATUS SWITCH */}
-            <div>
-              <label style={switch}>
-                <input
-                  type="checkbox"
-                  checked={u.is_active}
-                  onChange={() => toggleUser(u)}
-                />
-                <span style={slider}></span>
-              </label>
-            </div>
+          <div
+  onClick={(e) => {
+  e.stopPropagation()
+  toggleUser(u)
+}}
+  style={{
+    width: 40,
+    height: 20,
+    borderRadius: 20,
+    background: u.is_active ? '#4CAF50' : '#ccc',
+    cursor: 'pointer',
+    position: 'relative'
+  }}
+>
+  <div style={{
+    width: 16,
+    height: 16,
+    borderRadius: '50%',
+    background: '#fff',
+    position: 'absolute',
+    top: 2,
+    left: u.is_active ? 22 : 2,
+    transition: '0.3s'
+  }} />
+</div>
 
             {/* ACTION */}
             <button
               style={secondaryBtn}
-              onClick={() => router.push(`/admin/user/${u.id}`)}
+              onClick={(e) => {
+  e.stopPropagation()
+  router.push(`/admin/user/${u.id}`)
+}}
             >
               Upload Files
             </button>
@@ -195,8 +216,16 @@ const userRow = {
   padding: 15,
   marginTop: 10,
   borderRadius: 10,
-  background: 'rgba(255,255,255,0.08)'
+  background: 'rgba(255,255,255,0.08)',
+  transition: '0.3s',
+  cursor: 'pointer'
 }
+onMouseOver={(e) => {
+  e.currentTarget.style.background = 'rgba(255,255,255,0.15)'
+}}
+onMouseOut={(e) => {
+  e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
+}}
 
 const primaryBtn = {
   padding: '10px 20px',
@@ -230,7 +259,7 @@ const searchBox = {
   outline: 'none'
 }
 
-const switch = {
+const switchStyle = {
   position: 'relative',
   display: 'inline-block',
   width: 40,
