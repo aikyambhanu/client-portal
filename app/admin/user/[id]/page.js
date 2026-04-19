@@ -258,9 +258,7 @@ export default function UserFilesPage() {
     const url = await getSecureUrl(f.file_path)
     if (url) window.open(url, '_blank')
   }}
-  style={{ cursor: 'pointer' }}
-
-    📄 {truncate(f.name)}
+  style={{ cursor: 'pointer' }}    
 >
 
   <span
