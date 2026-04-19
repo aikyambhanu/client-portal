@@ -12,7 +12,6 @@ export default function UserFilesPage() {
   const [folderPath, setFolderPath] = useState([])
   const [dragActive, setDragActive] = useState(false)
 
-  const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState('')
 
   const currentFolder = folderPath.length
@@ -54,40 +53,11 @@ export default function UserFilesPage() {
     setFiles(data || [])
   }
 
-  // 🔁 CREATE OR GET FOLDER
-  const getOrCreateFolder = async (name, parentId) => {
-    const { data: existing } = await supabase
-      .from('folders')
-      .select('*')
-      .eq('client_id', id)
-      .eq('name', name)
-      .eq('parent_id', parentId)
-
-    if (existing && existing.length > 0) {
-      return existing[0].id
-    }
-
-    const { data } = await supabase
-      .from('folders')
-      .insert([
-        {
-          name,
-          client_id: id,
-          parent_id: parentId
-        }
-      ])
-      .select()
-
-    return data[0].id
-  }
-
-  // 📤 UPLOAD FILE
+  // 📤 Upload file
   const uploadFile = async (file, folderId) => {
     const filePath = `${id}/${Date.now()}-${file.name}`
 
-    await supabase.storage
-      .from('client-files')
-      .upload(filePath, file)
+    await supabase.storage.from('client-files').upload(filePath, file)
 
     await supabase.from('files').insert([
       {
@@ -99,7 +69,26 @@ export default function UserFilesPage() {
     ])
   }
 
-  // 📁 RECURSIVE FOLDER HANDLER
+  // 📁 Create/Get folder
+  const getOrCreateFolder = async (name, parentId) => {
+    const { data: existing } = await supabase
+      .from('folders')
+      .select('*')
+      .eq('client_id', id)
+      .eq('name', name)
+      .eq('parent_id', parentId)
+
+    if (existing?.length) return existing[0].id
+
+    const { data } = await supabase
+      .from('folders')
+      .insert([{ name, client_id: id, parent_id: parentId }])
+      .select()
+
+    return data[0].id
+  }
+
+  // 🔁 Traverse folders
   const traverseFileTree = async (item, parentId) => {
     if (item.isFile) {
       item.file(async (file) => {
@@ -108,9 +97,8 @@ export default function UserFilesPage() {
     } else if (item.isDirectory) {
       const newFolderId = await getOrCreateFolder(item.name, parentId)
 
-      const dirReader = item.createReader()
-
-      dirReader.readEntries(async (entries) => {
+      const reader = item.createReader()
+      reader.readEntries(async (entries) => {
         for (let entry of entries) {
           await traverseFileTree(entry, newFolderId)
         }
@@ -118,83 +106,96 @@ export default function UserFilesPage() {
     }
   }
 
-  // 🟦 HANDLE DROP (FOLDER SUPPORT)
+  // 🟦 Drop handler
   const handleDrop = async (e) => {
     e.preventDefault()
     setDragActive(false)
-    setUploading(true)
-    setMessage('Uploading folder...')
 
     const items = e.dataTransfer.items
 
     for (let i = 0; i < items.length; i++) {
       const entry = items[i].webkitGetAsEntry()
-      if (entry) {
-        await traverseFileTree(entry, currentFolder?.id || null)
-      }
+      if (entry) await traverseFileTree(entry, currentFolder?.id || null)
     }
 
-    setUploading(false)
     setMessage('Upload complete ✅')
     fetchFolders()
     fetchFiles()
   }
 
-  const getFileUrl = (path) => {
-    return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/client-files/${path}`
+  // 🗑 DELETE FILE
+  const deleteFile = async (file) => {
+    if (!confirm('Delete this file?')) return
+
+    await supabase.storage.from('client-files').remove([file.file_path])
+    await supabase.from('files').delete().eq('id', file.id)
+
+    setMessage('File deleted 🗑️')
+    fetchFiles()
   }
 
-  const openFolder = (folder) => {
-    setFolderPath([...folderPath, folder])
+  // 🗑 DELETE FOLDER (RECURSIVE)
+  const deleteFolder = async (folderId) => {
+    if (!confirm('Delete this folder and all its contents?')) return
+
+    // delete child files
+    const { data: files } = await supabase
+      .from('files')
+      .select('*')
+      .eq('folder_id', folderId)
+
+    if (files?.length) {
+      await supabase.storage
+        .from('client-files')
+        .remove(files.map(f => f.file_path))
+
+      await supabase.from('files').delete().eq('folder_id', folderId)
+    }
+
+    // delete subfolders
+    const { data: subfolders } = await supabase
+      .from('folders')
+      .select('*')
+      .eq('parent_id', folderId)
+
+    if (subfolders?.length) {
+      for (let sf of subfolders) {
+        await deleteFolder(sf.id)
+      }
+    }
+
+    // delete folder itself
+    await supabase.from('folders').delete().eq('id', folderId)
+
+    setMessage('Folder deleted 🗑️')
+    fetchFolders()
+    fetchFiles()
   }
 
-  const goBack = () => {
-    setFolderPath(folderPath.slice(0, -1))
-  }
+  const openFolder = (f) => setFolderPath([...folderPath, f])
+  const goBack = () => setFolderPath(folderPath.slice(0, -1))
 
-  const truncate = (text) =>
-    text.length > 18 ? text.slice(0, 18) + '...' : text
+  const getFileUrl = (path) =>
+    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/client-files/${path}`
+
+  const truncate = (t) => (t.length > 18 ? t.slice(0, 18) + '...' : t)
 
   return (
     <div style={container}>
-
       {/* SIDEBAR */}
       <div style={sidebar}>
         <h3>📁 Upload Panel</h3>
-        <div style={navItem} onClick={() => setFolderPath([])}>
-          Root
-        </div>
+        <div style={navItem} onClick={() => setFolderPath([])}>Root</div>
       </div>
 
       {/* MAIN */}
       <div style={{ flex: 1, padding: 25 }}>
-
-        {/* TOP */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {folderPath.length > 0 && (
-            <button onClick={goBack} style={backBtn}>←</button>
-          )}
+          {folderPath.length > 0 && <button onClick={goBack}>←</button>}
           <h2>Upload Files</h2>
         </div>
 
         {message && <p>{message}</p>}
-
-        {/* BREADCRUMB */}
-        <div style={{ marginBottom: 20 }}>
-          <span style={crumb} onClick={() => setFolderPath([])}>Root</span>
-
-          {folderPath.map((f, i) => (
-            <span key={f.id}>
-              {' › '}
-              <span
-                style={crumb}
-                onClick={() => setFolderPath(folderPath.slice(0, i + 1))}
-              >
-                {f.name}
-              </span>
-            </span>
-          ))}
-        </div>
 
         {/* DROP ZONE */}
         <div
@@ -202,50 +203,51 @@ export default function UserFilesPage() {
             e.preventDefault()
             setDragActive(true)
           }}
-          onDragLeave={() => setDragActive(false)}
           onDrop={handleDrop}
           style={{
             border: '2px dashed #aaa',
             padding: 40,
-            textAlign: 'center',
-            borderRadius: 12,
-            background: dragActive
-              ? 'rgba(255,255,255,0.2)'
-              : 'rgba(255,255,255,0.1)'
+            borderRadius: 12
           }}
         >
           Drag & Drop folders or files
         </div>
 
         {/* FOLDERS */}
-        <h3 style={{ marginTop: 25 }}>Folders</h3>
+        <h3>Folders</h3>
         <div style={grid}>
           {folders.map(f => (
-            <div key={f.id} style={card} onClick={() => openFolder(f)}>
-              📁 {truncate(f.name)}
+            <div key={f.id} style={card}>
+              <div onClick={() => openFolder(f)}>
+                📁 {truncate(f.name)}
+              </div>
+              <button onClick={() => deleteFolder(f.id)} style={deleteBtn}>
+                Delete
+              </button>
             </div>
           ))}
         </div>
 
         {/* FILES */}
-        <h3 style={{ marginTop: 25 }}>Files</h3>
+        <h3>Files</h3>
         <div style={grid}>
           {files.map(f => (
             <div key={f.id} style={card}>
               <a href={getFileUrl(f.file_path)} target="_blank">
                 📄 {truncate(f.name)}
               </a>
+              <button onClick={() => deleteFile(f)} style={deleteBtn}>
+                Delete
+              </button>
             </div>
           ))}
         </div>
-
       </div>
     </div>
   )
 }
 
-/* STYLES */
-
+/* styles */
 const container = {
   display: 'flex',
   minHeight: '100vh',
@@ -253,17 +255,8 @@ const container = {
   color: '#fff'
 }
 
-const sidebar = {
-  width: 220,
-  padding: 20,
-  background: 'rgba(255,255,255,0.08)',
-  backdropFilter: 'blur(10px)'
-}
-
-const navItem = {
-  marginTop: 10,
-  cursor: 'pointer'
-}
+const sidebar = { width: 220, padding: 20 }
+const navItem = { cursor: 'pointer', marginTop: 10 }
 
 const grid = {
   display: 'grid',
@@ -274,20 +267,14 @@ const grid = {
 const card = {
   padding: 15,
   borderRadius: 10,
-  background: 'rgba(255,255,255,0.15)',
-  cursor: 'pointer',
-  whiteSpace: 'nowrap',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis'
+  background: 'rgba(255,255,255,0.15)'
 }
 
-const crumb = {
-  cursor: 'pointer'
-}
-
-const backBtn = {
-  padding: '6px 10px',
-  borderRadius: 6,
+const deleteBtn = {
+  marginTop: 5,
+  background: 'red',
+  color: '#fff',
   border: 'none',
+  padding: 5,
   cursor: 'pointer'
 }
